@@ -26,6 +26,22 @@ atualizado:
 
 ![Painel de detalhes exibido ao passar o mouse](docs/images/painel.svg)
 
+### Aviso de ritmo
+
+No topo do painel, o Breath projeta como cada limite vai estar no reset se você
+mantiver o ritmo médio desde o início da janela:
+
+| Cor | Quando aparece |
+|---|---|
+| 🔵 Azul | você chega ao reset **com crédito** (mesmo que com 99%) |
+| 🟡 Amarelo | o limite acaba **pouco antes** do reset: até **1 dia** antes na semana, ou até **45 min** antes na sessão de 5h |
+| 🔴 Vermelho | o limite acaba com mais antecedência que isso |
+
+A caixa grande mostra o limite mais grave. Se empatar, mostra o que acaba
+primeiro. Logo abaixo, uma linha curta mostra o outro limite, com uma bolinha na
+cor dele. Logo depois de um reset, o aviso só aparece depois de 20 min de sessão
+ou 6 h de semana, porque antes disso a média ainda não é confiável.
+
 **Ao clicar**, abre um menu com **Atualizar agora** e **Abrir uso no claude.ai**.
 
 Os dados são atualizados a cada 2 minutos. Se a API pedir para esperar, o
