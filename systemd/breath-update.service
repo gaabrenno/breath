@@ -1,0 +1,7 @@
+[Unit]
+Description=Breath: atualiza para a última versão publicada
+
+[Service]
+Type=oneshot
+TimeoutStartSec=5min
+ExecStart=@BREATH_DIR@/scripts/update.sh
