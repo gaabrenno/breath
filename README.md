@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/logo.svg" width="128" alt="Logo do Breath">
+  <img src="docs/images/logo-sopro.svg" width="128" alt="Logo do Breath">
 </p>
 
 <h1 align="center">Breath</h1>
