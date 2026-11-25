@@ -66,6 +66,13 @@ export default {
         assertEq(r.session.source, 'stale');
         assertEq(r.session.pct, 40);
     },
+    'usa taxas salvas (rate5h/rate7d) quando presentes': async () => {
+        const o = official({tokens5h: 0, rate5h: 0.05});
+        o.usage.session.pct = 0;
+        const r = await estimateReadings(o, fakeCounter(200), now);
+        assertClose(r.session.pct, 10);
+        assertEq(r.session.source, 'estimate');
+    },
     'limita a 100': async () => {
         const o = official();
         o.usage.weekly.pct = 95;

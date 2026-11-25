@@ -1,6 +1,8 @@
 /**
  * @typedef {import('./usage.js').Usage} Usage
- * @typedef {{ts:number, plan:string|null, usage:Usage, tokens5h:number, tokens7d:number}} Official
+ * @typedef {{ts:number, plan:string|null, usage:Usage, tokens5h:number, tokens7d:number,
+ *            rate5h?:number|null, rate7d?:number|null}} Official
+ *   rate*: % por token da última calibração válida (pct>0 e tokens>0).
  * @typedef {{pct:number|null, resetsAt:number|null,
  *            source:'official'|'stale'|'estimate'|'none',
  *            ageMs:number, deltaPct:number}} Reading
@@ -11,9 +13,14 @@ export const SESSION_MS = 5 * 3600e3;
 export const WEEK_MS = 7 * 24 * 3600e3;
 
 const WINDOWS = [
-    ['session', SESSION_MS, 'tokens5h'],
-    ['weekly', WEEK_MS, 'tokens7d'],
+    ['session', SESSION_MS, 'tokens5h', 'rate5h'],
+    ['weekly', WEEK_MS, 'tokens7d', 'rate7d'],
 ];
+
+/** Taxa % por token de uma leitura, ou null se ela não calibra nada. */
+export function rateOf(pct, tokens) {
+    return pct > 0 && tokens > 0 ? pct / tokens : null;
+}
 
 const NONE = {pct: null, resetsAt: null, source: 'none', ageMs: 0, deltaPct: 0};
 
@@ -42,10 +49,11 @@ export async function estimateReadings(official, countTokens, nowMs) {
     if (!official)
         return {session: {...NONE}, weekly: {...NONE}};
     const out = {};
-    for (const [kind, dur, tokKey] of WINDOWS) {
+    for (const [kind, dur, tokKey, rateKey] of WINDOWS) {
         const w = official.usage[kind];
-        const calTokens = official[tokKey];
-        const rate = calTokens > 0 ? w.pct / calTokens : null;
+        const rate = typeof official[rateKey] === 'number'
+            ? official[rateKey]
+            : rateOf(w.pct, official[tokKey]);
 
         let base = w.pct, since = official.ts, resetsAt = w.resetsAt;
         if (resetsAt !== null && nowMs >= resetsAt) {

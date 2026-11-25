@@ -10,17 +10,12 @@ function weighted(u) {
 }
 
 /**
- * Soma ponderada dos tokens das respostas em [fromMs, toMs).
- * O Claude Code grava várias linhas por resposta com o mesmo `usage`:
- * cada requestId (ou message.id) conta uma vez só, via `seen`.
- * @param {string} text conteúdo JSONL
- * @param {number} fromMs
- * @param {number} toMs
- * @param {Set<string>} seen
- * @returns {number}
+ * Extrai registros {ts, key, weight} das linhas JSONL com `message.usage`.
+ * @param {string} text
+ * @returns {{ts:number, key:string|null, weight:number}[]}
  */
-export function countTokensInText(text, fromMs, toMs, seen) {
-    let total = 0;
+export function parseRecords(text) {
+    const out = [];
     for (const raw of text.split('\n')) {
         if (!raw.includes('"usage"'))
             continue;
@@ -34,15 +29,42 @@ export function countTokensInText(text, fromMs, toMs, seen) {
         if (!usage || typeof usage !== 'object')
             continue;
         const ts = Date.parse(row.timestamp);
-        if (Number.isNaN(ts) || ts < fromMs || ts >= toMs)
+        if (Number.isNaN(ts))
             continue;
-        const key = row.requestId ?? row.message.id;
-        if (key) {
-            if (seen.has(key))
+        out.push({ts, key: row.requestId ?? row.message.id ?? null, weight: weighted(usage)});
+    }
+    return out;
+}
+
+/**
+ * Soma registros em [fromMs, toMs), contando cada chave uma vez (via `seen`).
+ * @param {{ts:number, key:string|null, weight:number}[]} records
+ */
+export function sumRecords(records, fromMs, toMs, seen) {
+    let total = 0;
+    for (const r of records) {
+        if (r.ts < fromMs || r.ts >= toMs)
+            continue;
+        if (r.key) {
+            if (seen.has(r.key))
                 continue;
-            seen.add(key);
+            seen.add(r.key);
         }
-        total += weighted(usage);
+        total += r.weight;
     }
     return total;
+}
+
+/**
+ * Soma ponderada dos tokens das respostas em [fromMs, toMs).
+ * O Claude Code grava várias linhas por resposta com o mesmo `usage`:
+ * cada requestId (ou message.id) conta uma vez só, via `seen`.
+ * @param {string} text conteúdo JSONL
+ * @param {number} fromMs
+ * @param {number} toMs
+ * @param {Set<string>} seen
+ * @returns {number}
+ */
+export function countTokensInText(text, fromMs, toMs, seen) {
+    return sumRecords(parseRecords(text), fromMs, toMs, seen);
 }

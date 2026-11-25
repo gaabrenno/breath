@@ -10,8 +10,11 @@ function parseWindow(w) {
         return null;
     if (typeof w !== 'object' || typeof w.utilization !== 'number' || Number.isNaN(w.utilization))
         throw new Error('unexpected usage shape');
-    const resetsAt = w.resets_at ? Date.parse(w.resets_at) : null;
-    return {pct: clamp(w.utilization), resetsAt: Number.isNaN(resetsAt) ? null : resetsAt};
+    const raw = w.resets_at ? Date.parse(w.resets_at) : NaN;
+    // A API varia os sub-segundos a cada chamada: arredonda ao minuto para a
+    // janela ter uma identidade estável (chave de notificação).
+    const resetsAt = Number.isNaN(raw) ? null : Math.round(raw / 60e3) * 60e3;
+    return {pct: clamp(w.utilization), resetsAt};
 }
 
 /**

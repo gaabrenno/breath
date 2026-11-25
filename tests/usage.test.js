@@ -10,8 +10,8 @@ const fixture = () => JSON.parse(new TextDecoder().decode(bytes));
 export default {
     'usage pro': () => {
         const u = parseUsage(fixture());
-        assertEq(u.session, {pct: 5, resetsAt: Date.parse('2026-11-25T21:50:00.394462+00:00')});
-        assertEq(u.weekly, {pct: 61, resetsAt: Date.parse('2026-11-30T04:00:00.394486+00:00')});
+        assertEq(u.session, {pct: 5, resetsAt: Date.parse('2026-11-25T21:50:00Z')});
+        assertEq(u.weekly, {pct: 61, resetsAt: Date.parse('2026-11-30T04:00:00Z')});
         assertEq(u.weeklyOpus, null);
         assertEq(u.weeklySonnet, null);
     },
@@ -41,6 +41,12 @@ export default {
         let threw = false;
         try { parseUsage(f); } catch { threw = true; }
         assert(threw);
+    },
+    'resets_at é arredondado ao minuto (API varia nos sub-segundos)': () => {
+        const f = fixture();
+        f.five_hour.resets_at = '2026-11-25T21:49:59.652000+00:00';
+        assertEq(parseUsage(f).session.resetsAt, Date.parse('2026-11-25T21:50:00Z'));
+        assertEq(parseUsage(fixture()).session.resetsAt, Date.parse('2026-11-25T21:50:00Z'));
     },
     'pct acima de 100 é limitado': () => {
         const f = fixture();

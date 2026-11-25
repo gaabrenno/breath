@@ -26,12 +26,15 @@ export class ApiError extends Error {
 
 /**
  * GET /api/oauth/usage. Nunca inclui o token em mensagens de erro.
+ * Não segue redirects: o token só vai para o host de USAGE_URL.
  * @param {Soup.Session} session
  * @param {string} token
+ * @param {string} [url] só para testes
  * @returns {Promise<object>}
  */
-export async function fetchUsage(session, token) {
-    const msg = Soup.Message.new('GET', USAGE_URL);
+export async function fetchUsage(session, token, url = USAGE_URL) {
+    const msg = Soup.Message.new('GET', url);
+    msg.set_flags(Soup.MessageFlags.NO_REDIRECT);
     const h = msg.get_request_headers();
     h.append('Authorization', `Bearer ${token}`);
     h.append('anthropic-beta', 'oauth-2025-04-20');

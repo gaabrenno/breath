@@ -52,7 +52,7 @@ export default {
         const seen = [];
         const {c} = make({countTokens: async (f, t) => { seen.push([f, t]); return 1; }});
         await c.refresh();
-        const wk = Date.parse('2026-11-30T04:00:00.394486+00:00') - 7 * 24 * 3600e3;
+        const wk = Date.parse('2026-11-30T04:00:00Z') - 7 * 24 * 3600e3;
         assert(seen.some(([f, t]) => f === wk && t === NOW), 'janela semanal');
     },
     'sem token não chama a API e usa estimativa': async () => {
@@ -105,6 +105,41 @@ export default {
         const c2 = new Controller({...deps, onNotify: (t, b) => calls.notes.push([t, b])});
         await c2.refresh();
         assertEq(calls.notes.length, 1);
+    },
+    'notificação não repete quando resets_at varia nos sub-segundos': async () => {
+        let i = 0;
+        const {c, calls} = make({fetchUsage: async () => {
+            const u = usageJson();
+            u.seven_day.utilization = 91;
+            u.seven_day.resets_at = ['2026-11-30T04:00:00.394486+00:00', '2026-11-30T03:59:59.652000+00:00'][i++ % 2];
+            return u;
+        }});
+        await c.refresh();
+        await c.refresh();
+        assertEq(calls.notes.length, 1);
+    },
+    'calibração anterior sobrevive a leitura com 0%': async () => {
+        let mode = 'ok';
+        const {c, calls} = make({
+            fetchUsage: async () => {
+                const u = usageJson();
+                u.five_hour.utilization = 50;
+                if (mode === 'zero')
+                    u.five_hour = null;
+                return u;
+            },
+            readCredentialsText: async () => mode === 'expired' ? '{}'
+                : JSON.stringify({claudeAiOauth: {accessToken: TOKEN, expiresAt: NOW + 3600e3, subscriptionType: 'pro'}}),
+            countTokens: async () => 1000,
+        });
+        await c.refresh();           // calibra: 50% / 1000 tokens
+        mode = 'zero';
+        await c.refresh();           // sem sessão ativa: pct 0
+        mode = 'expired';
+        await c.refresh();           // fallback: 1000 tokens novos → ~50%
+        const v = calls.updates.at(-1);
+        assertEq(v.session.source, 'estimate');
+        assertClose(v.session.pct, 50);
     },
     'texto de notificação da estimativa': async () => {
         const store = new MemStore({official: {ts: NOW - 3600e3, plan: 'pro', usage: {session: {pct: 85, resetsAt: NOW + 3600e3}, weekly: {pct: 10, resetsAt: NOW + 86400e3}, weeklyOpus: null, weeklySonnet: null}, tokens5h: 1000, tokens7d: 1000}, notified: []});

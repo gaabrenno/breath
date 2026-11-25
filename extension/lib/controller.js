@@ -1,7 +1,7 @@
 import {ApiError} from './api.js';
 import {parseCredentials} from './credentials.js';
 import {parseUsage} from './usage.js';
-import {officialReadings, estimateReadings, SESSION_MS, WEEK_MS} from './estimate.js';
+import {officialReadings, estimateReadings, rateOf, SESSION_MS, WEEK_MS} from './estimate.js';
 import {notificationsFor} from './notify.js';
 
 export const BASE_INTERVAL_SEC = 120;
@@ -43,7 +43,7 @@ export class Controller {
         }
     }
 
-    async _tryOfficial(now) {
+    async _tryOfficial(now, prev) {
         let creds = null;
         try {
             creds = parseCredentials(await this._readCreds(), now);
@@ -56,7 +56,13 @@ export class Controller {
             const tokens5h = await this._safeCount(start(usage.session, SESSION_MS), now);
             const tokens7d = await this._safeCount(start(usage.weekly, WEEK_MS), now);
             this._interval = BASE_INTERVAL_SEC;
-            return {ts: now, plan: creds.plan, usage, tokens5h, tokens7d};
+            // Mantém a última calibração válida: uma leitura com 0% ou sem tokens não a apaga.
+            const prevRate = k => (typeof prev?.[k] === 'number' ? prev[k] : rateOf(
+                k === 'rate5h' ? prev?.usage.session.pct : prev?.usage.weekly.pct,
+                k === 'rate5h' ? prev?.tokens5h : prev?.tokens7d));
+            return {ts: now, plan: creds.plan, usage, tokens5h, tokens7d,
+                rate5h: rateOf(usage.session.pct, tokens5h) ?? prevRate('rate5h'),
+                rate7d: rateOf(usage.weekly.pct, tokens7d) ?? prevRate('rate7d')};
         } catch (e) {
             if (e instanceof ApiError && e.status === 429)
                 this._interval = Math.min(MAX_INTERVAL_SEC, this._interval * 2);
@@ -70,7 +76,7 @@ export class Controller {
         this._state ??= await this._store.load();
         const state = this._state;
 
-        const fresh = await this._tryOfficial(now);
+        const fresh = await this._tryOfficial(now, state.official);
         let readings;
         if (fresh) {
             state.official = fresh;
