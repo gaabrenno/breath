@@ -1,7 +1,7 @@
 [Unit]
 Description=Breath: atualiza para a última versão publicada
-After=network-online.target
 
 [Service]
 Type=oneshot
+TimeoutStartSec=5min
 ExecStart=@BREATH_DIR@/scripts/update.sh

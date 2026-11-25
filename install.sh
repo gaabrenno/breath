@@ -24,8 +24,8 @@ main() {
         die "o Breath requer GNOME Shell 49 (encontrado: ${gs:-nenhum})."
     grep -q '"claudeAiOauth"' "$HOME/.claude/.credentials.json" 2>/dev/null ||
         die "não encontrei o login do Claude Code. Instale o Claude Code, rode 'claude' e use /login."
-    if [ -d "$link" ] && [ ! -L "$link" ]; then
-        die "já existe uma pasta em $link (instalação manual?). Remova-a e rode o instalador de novo."
+    if [ -e "$link" ] && [ ! -L "$link" ]; then
+        die "já existe uma pasta ou arquivo em $link (instalação manual?). Remova e rode o instalador de novo."
     fi
 
     # 2) Clone (ou atualização) e checkout da última versão publicada.
@@ -38,7 +38,7 @@ main() {
         git clone --quiet "$repo" "$dir" || die "não consegui clonar $repo"
     fi
     local tag
-    tag=$(git -C "$dir" tag -l 'v[0-9]*' | sort -V | tail -n 1)
+    tag=$(git -C "$dir" tag -l 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
     [ -n "$tag" ] || die "nenhuma versão publicada em $repo ainda."
     git -C "$dir" -c advice.detachedHead=false checkout --quiet --force "$tag" ||
         die "não consegui usar a versão $tag"
@@ -57,10 +57,18 @@ main() {
         say "Aviso: não consegui ligar o timer de atualização (systemctl --user)."
 
     # 5) Ativa a extensão (no Wayland, antes do relogin, cai no gsettings).
+    #    disabled-extensions tem precedência no GNOME 49: tira o Breath de lá.
     if ! gnome-extensions enable "$uuid" >/dev/null 2>&1; then
         local list
-        list=$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")
-        if [[ $list != *"'$uuid'"* ]]; then
+        if list=$(gsettings get org.gnome.shell disabled-extensions 2>/dev/null) && [[ $list == *"'$uuid'"* ]]; then
+            list=${list//", '$uuid'"/}
+            list=${list//"'$uuid', "/}
+            list=${list//"'$uuid'"/}
+            [[ $list == "[]" ]] && list="@as []"
+            gsettings set org.gnome.shell disabled-extensions "$list"
+        fi
+        list=$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null) || list=SKIP
+        if [[ $list != SKIP && $list != *"'$uuid'"* ]]; then
             if [[ $list == "@as []" || $list == "[]" ]]; then
                 list="['$uuid']"
             else

@@ -79,3 +79,27 @@ test_install_via_stdin() {
     bash < "$REPO_ROOT/install.sh" > "$HOME/out.txt" 2>&1 || { cat "$HOME/out.txt"; fail "via stdin falhou"; }
     assert_eq "$(current_tag)" v1.0.0
 }
+
+test_reenable_clears_disabled_extensions() {
+    sandbox; make_remote v1.0.0
+    echo "['outra@x', 'breath@simer']" > "$HOME/.gsettings-disabled-extensions"
+    FAKE_EXT_FAIL=1 run_install || fail "saída != 0"
+    assert_eq "$(cat "$HOME/.gsettings-disabled-extensions")" "['outra@x']"
+    assert_contains "$HOME/.gsettings" "'breath@simer'"
+}
+test_install_ignores_non_release_tags() {
+    sandbox; make_remote v1.0.0 v1.1.0-rc1 v9-test
+    run_install || fail "saída != 0"
+    assert_eq "$(current_tag)" v1.0.0
+}
+test_service_has_timeout() {
+    sandbox; make_remote v1.0.0
+    run_install || fail "saída != 0"
+    assert_contains "$(UNITS)/breath-update.service" "TimeoutStartSec="
+}
+test_regular_file_at_link_refuses() {
+    sandbox; make_remote v1.0.0
+    mkdir -p "$(dirname "$(LINK)")"; echo meu > "$(LINK)"
+    run_install && fail "deveria recusar"
+    assert_eq "$(cat "$(LINK)")" meu
+}

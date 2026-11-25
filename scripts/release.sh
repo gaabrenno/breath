@@ -16,13 +16,21 @@ git rev-parse -q --verify "refs/tags/$tag" >/dev/null && die "a tag $tag já exi
 git fetch -q --tags origin 2>/dev/null
 git rev-parse -q --verify "refs/tags/$tag" >/dev/null && die "a tag $tag já existe no remoto."
 
+latest=$(git tag -l 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+if [ -n "$latest" ] && [ "$(printf '%s\n%s\n' "$latest" "$tag" | sort -V | tail -n 1)" != "$tag" ]; then
+    die "a versão precisa ser maior que $latest (o atualizador sempre instala a maior)."
+fi
+
 echo "Rodando os testes..."
 bash -c "${BREATH_TEST_CMD:-TZ=America/Sao_Paulo gjs -m tests/run.js && bash tests/shell/run.sh}" >/dev/null 2>&1 ||
     die "os testes falharam; nada foi publicado."
 
 sed -i -E "s/(\"version-name\": *\")[^\"]*\"/\1$ver\"/" extension/metadata.json
 grep -q "\"version-name\": \"$ver\"" extension/metadata.json || die "não consegui gravar version-name."
-git commit -qam "release: $tag"
-git tag -a "$tag" -m "Breath $tag"
+if ! git commit -qam "release: $tag"; then
+    git checkout -q -- extension/metadata.json
+    die "o commit falhou; nada foi publicado."
+fi
+git tag -a "$tag" -m "Breath $tag" || die "não consegui criar a tag; desfaça com: git reset --hard HEAD~1"
 git push -q --atomic origin main "$tag" || die "push falhou; desfaça com: git tag -d $tag && git reset --hard HEAD~1"
 echo "Publicado $tag. As instalações atualizam em até 1h (vale no próximo login)."

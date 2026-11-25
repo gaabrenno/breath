@@ -27,7 +27,9 @@ S
     cat > "$STUBS/gsettings" <<'S'
 #!/usr/bin/env bash
 echo "gsettings $*" >> "$SYSLOG"
+# enabled-extensions fica em ~/.gsettings; outras chaves em ~/.gsettings-<chave>
 f=$HOME/.gsettings
+[ "${3:-}" = enabled-extensions ] || f=$HOME/.gsettings-${3:-}
 case $1 in
     get) cat "$f" 2>/dev/null || echo "@as []" ;;
     set) printf '%s\n' "$4" > "$f" ;;

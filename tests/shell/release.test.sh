@@ -44,3 +44,18 @@ test_release_tests_fail() {
     assert_eq "$(git -C "$WORK" rev-parse HEAD)" "$before"
     assert_eq "$(git -C "$WORK" tag -l)" ""
 }
+
+test_release_lower_version_refused() {
+    setup_release v1.2.0
+    release 1.0.1 && fail "deveria recusar versão menor"
+    assert_contains "$HOME/out.txt" "maior"
+    remote_tags | grep -qx v1.0.1 && fail "publicou v1.0.1"
+    true
+}
+test_release_commit_failure_publishes_nothing() {
+    setup_release
+    printf '#!/bin/sh\nexit 1\n' > "$WORK/.git/hooks/pre-commit"; chmod +x "$WORK/.git/hooks/pre-commit"
+    release 1.0.0 && fail "deveria falhar"
+    assert_eq "$(git -C "$WORK" tag -l)" ""
+    assert_eq "$(remote_tags)" ""
+}
