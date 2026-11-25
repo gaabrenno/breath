@@ -47,73 +47,139 @@ ou 6 h de semana, porque antes disso a média ainda não é confiável.
 Os dados são atualizados a cada 2 minutos. Se a API pedir para esperar, o
 intervalo dobra até no máximo 10 minutos.
 
-## De onde vêm os números
+## Conexão com o Claude: sem login
 
-1. **Oficial (principal):** o Breath lê o token OAuth do Claude Code em
-   `~/.claude/.credentials.json` e consulta o mesmo endpoint que o `/usage` do
-   Claude Code usa. Os números são os mesmos do claude.ai, porque somam o uso na
-   web, no app e no Claude Code.
-2. **Fallback:** quando o token expira (o Claude Code só o renova enquanto está
-   rodando) ou a API não responde, o Breath mostra o **último valor oficial com a
-   idade dele**. Por exemplo, "Oficial há 3h". Se houver uso no Claude Code
-   depois disso, ele soma um **acréscimo estimado** (`~`) a partir dos logs
-   locais em `~/.claude/projects/*/*.jsonl`, calibrado pelas leituras oficiais.
+O Breath **não pede login e não se conecta à sua conta por conta própria**. Ele
+aproveita a sessão que o **Claude Code** já mantém no seu computador:
 
-O endpoint não é documentado e pode mudar sem aviso. Se o formato da resposta
-mudar, o Breath passa automaticamente para o fallback.
+1. Quando você faz login no Claude Code (`claude` e depois `/login`), ele guarda o
+   token da sua conta em `~/.claude/.credentials.json`.
+2. A cada 2 minutos, o Breath **lê esse token, só para leitura**, e com ele
+   consulta o uso da conta no mesmo endpoint que o comando `/usage` do Claude
+   Code usa.
+3. Se você trocar de conta no Claude Code, o Breath passa a mostrar a conta nova
+   no ciclo seguinte.
+
+O Breath **nunca** pede senha, abre tela de login, renova o token ou altera o
+arquivo de credenciais. Por isso ele não interfere no login do Claude Code.
+
+**O que isso significa para você:**
+
+- É preciso ter o **Claude Code instalado e logado com uma assinatura (Pro ou
+  Max)**, mesmo que você use o Claude mais pela web ou pelo app. Os números
+  mostrados somam tudo: web, app e Claude Code.
+- Quem usa **só o claude.ai**, sem o Claude Code, não consegue usar o Breath: o
+  painel fica em "Sem dados ainda".
+- Contas que usam **chave de API do Console** não têm limites de sessão e de semana
+  para mostrar.
+- **Token expirado:** o Claude Code só renova o token enquanto está aberto. Se você
+  ficar um tempo sem abri-lo, o Breath mostra o **último valor oficial com a idade
+  dele** (por exemplo, "Oficial há 3h"). Se houver uso no Claude Code depois
+  disso, ele soma um **acréscimo estimado** (`~`) a partir dos logs locais em
+  `~/.claude/projects/*/*.jsonl`. Ao abrir o Claude Code de novo, os números
+  oficiais voltam.
+
+O endpoint de uso não é documentado pela Anthropic e pode mudar sem aviso. Se o
+formato da resposta mudar, o Breath passa automaticamente para o modo de
+estimativa.
 
 ### Segurança e privacidade
 
-- O token é **somente lido**. O Breath nunca renova o token nem escreve no
-  arquivo de credenciais, então não interfere no login do Claude Code.
-- O token nunca aparece em logs.
+- O token é **somente lido** e nunca aparece em logs.
 - As requisições **não seguem redirecionamentos**: o token só vai para
   `api.anthropic.com`.
-- O estado (último valor oficial, calibração e notificações já enviadas) fica
-  em `~/.cache/breath/state.json`.
+- Nada sai do seu computador além dessa consulta. O estado (último valor
+  oficial, calibração e notificações já enviadas) fica em
+  `~/.cache/breath/state.json`.
 
 ## Requisitos
 
 - GNOME Shell 49 (testado no Ubuntu 25.10, Wayland)
-- Claude Code instalado e logado
+- `git`
+- Claude Code instalado e logado com uma assinatura Pro ou Max
 
 ## Instalação
 
-```bash
-git clone git@github.com:gaabrenno/breath.git
-cd breath
-bash scripts/install.sh   # cria o link em ~/.local/share/gnome-shell/extensions/breath@simer
-```
-
-No Wayland, encerre a sessão e entre de novo. Depois, ative a extensão:
+Um comando só:
 
 ```bash
-gnome-extensions enable breath@simer
+curl -fsSL https://raw.githubusercontent.com/gaabrenno/breath/main/install.sh | bash
 ```
 
-Para testar sem sair da sessão, abra um GNOME dentro de uma janela (requer o
-pacote `mutter-dev-bin`):
+O instalador confere os requisitos antes de mexer em qualquer coisa e explica o
+que falta, se for o caso. Depois ele:
+
+1. baixa a última versão publicada em `~/.local/share/breath`;
+2. ativa a extensão;
+3. liga a atualização automática.
+
+No Wayland, **encerre a sessão e entre de novo** para o Breath aparecer na barra.
+
+### Atualizações automáticas
+
+A cada hora (e 2 minutos depois do login), o Breath procura uma versão nova
+publicada. Se houver, ele baixa e mostra a notificação *"Breath atualizado para
+vX.Y.Z — vale na próxima sessão"*. Sem internet, ele só tenta de novo mais tarde.
+
+```bash
+systemctl --user list-timers breath-update.timer      # próxima checagem
+systemctl --user start breath-update.service          # checar agora
+systemctl --user disable --now breath-update.timer    # desligar as atualizações
+```
+
+> Atualizações automáticas significam que o código publicado neste repositório
+> passa a rodar no seu GNOME. Instale apenas se confiar nele.
+
+### Desinstalar
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaabrenno/breath/main/uninstall.sh | bash
+```
+
+O desinstalador remove a extensão, a atualização automática,
+`~/.local/share/breath` e `~/.cache/breath`. Ele não toca nas credenciais do
+Claude Code.
+
+## Desenvolvimento
+
+```bash
+git clone git@github.com:gaabrenno/breath.git && cd breath
+TZ=America/Sao_Paulo gjs -m tests/run.js   # testes da lógica (extension/lib)
+bash tests/shell/run.sh                    # testes do instalador e do atualizador
+gjs -m scripts/smoke-api.js                # chamada real à API; imprime só as porcentagens
+```
+
+**Testar código não publicado:** `scripts/dev-link.sh` faz a extensão apontar para
+a sua pasta de desenvolvimento. `scripts/dev-link.sh --off` volta para a
+instalação normal. Para ver o resultado sem sair da sessão, abra um GNOME dentro
+de uma janela (requer o pacote `mutter-dev-bin`):
 
 ```bash
 dbus-run-session gnome-shell --devkit --wayland
 ```
 
-## Desenvolvimento
+**Publicar uma versão:** a partir da `main`, com a árvore limpa:
 
 ```bash
-TZ=America/Sao_Paulo gjs -m tests/run.js   # testes de unidade (lógica pura em extension/lib)
-gjs -m scripts/smoke-api.js                # chamada real à API; imprime só as porcentagens
+scripts/release.sh 1.1.0
 ```
+
+O script roda os testes, grava a versão no `metadata.json`, cria a tag `v1.1.0`
+e envia. Todas as instalações recebem a versão em até 1 hora. Para corrigir uma
+versão com problema, publique uma nova.
 
 Estrutura:
 
 | Caminho | O que contém |
 |---|---|
-| `extension/lib/` | Lógica pura: credenciais, leitura da API, contagem de tokens nos logs, estimativa do fallback, regra de notificação e ciclo de atualização |
+| `extension/lib/` | Lógica pura: credenciais, leitura da API, contagem de tokens nos logs, estimativa do fallback, aviso de ritmo, regra de notificação e ciclo de atualização |
 | `extension/ui/` | O anel (Cairo) e o painel do hover |
 | `extension/extension.js` | Liga tudo na barra do GNOME |
-| `tests/` | Testes em GJS, sem dependências externas |
-| `docs/superpowers/` | Design e plano de implementação |
+| `install.sh`, `uninstall.sh` | Instalador e desinstalador de um comando |
+| `scripts/` | Atualizador, publicação de versões, `dev-link` e teste da API |
+| `systemd/` | Timer de atualização automática |
+| `tests/` | Testes em GJS e em shell, sem dependências externas |
+| `docs/superpowers/` | Design e planos de implementação |
 | `docs/images/` | Mockups usados neste README |
 
 Os logs da extensão podem ser acompanhados com:
