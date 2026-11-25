@@ -1,11 +1,16 @@
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import Pango from 'gi://Pango';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {colorFor} from '../lib/thresholds.js';
 import {formatReset, formatAge} from '../lib/format.js';
+import {paceWarning} from '../lib/pace.js';
 
 const BAR_W = 268;
+// Um valor representativo de cada nível, para reaproveitar a mesma paleta dos anéis.
+const LEVEL_PCT = {blue: 0, yellow: 75, red: 90};
 
 const cap = s => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
@@ -15,9 +20,19 @@ class UsagePopup extends St.BoxLayout {
     _init() {
         super._init({style_class: 'breath-popup', vertical: true, reactive: false, visible: false});
         this._title = new St.Label({style_class: 'breath-title'});
+        this._warning = new St.Label({style_class: 'breath-warning', visible: false});
+        this._warning.clutter_text.line_wrap = true;
+        this._warning.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
+        this._warning.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this._secondary = new St.Label({style_class: 'breath-warning-secondary', visible: false});
+        this._secondary.clutter_text.line_wrap = true;
+        this._secondary.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
+        this._secondary.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         this._rows = new St.BoxLayout({vertical: true});
         this._footer = new St.Label({style_class: 'breath-footer'});
         this.add_child(this._title);
+        this.add_child(this._warning);
+        this.add_child(this._secondary);
         this.add_child(this._rows);
         this.add_child(this._footer);
     }
@@ -43,6 +58,23 @@ class UsagePopup extends St.BoxLayout {
 
     update(view, nowMs) {
         this._title.text = view.plan ? `Limites do Claude · Plano ${cap(view.plan)}` : 'Limites do Claude';
+        const pace = paceWarning(view, nowMs);
+        this._warning.visible = pace !== null;
+        if (pace) {
+            for (const lvl of ['blue', 'yellow', 'red'])
+                this._warning.remove_style_class_name(`breath-warning-${lvl}`);
+            this._warning.add_style_class_name(`breath-warning-${pace.level}`);
+            const body = GLib.markup_escape_text(pace.text, -1);
+            this._warning.clutter_text.set_markup(pace.title
+                ? `<b>${GLib.markup_escape_text(pace.title, -1)}</b> ${body}` : body);
+        }
+        const sec = pace?.secondary ?? null;
+        this._secondary.visible = sec !== null;
+        if (sec) {
+            this._secondary.clutter_text.set_markup(
+                `<span foreground="${colorFor(LEVEL_PCT[sec.level])}">●</span>  ${GLib.markup_escape_text(sec.text, -1)}`);
+        }
+
         this._rows.destroy_all_children();
         this._rows.add_child(this._row('Sessão (janela de 5h)', view.session, nowMs));
         this._rows.add_child(this._row('Semanal (todos os modelos)', view.weekly, nowMs));
