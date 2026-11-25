@@ -1,0 +1,7 @@
+{
+  "uuid": "claude-limits@simer",
+  "name": "Claude Limits",
+  "description": "Mostra na barra superior o uso dos limites de sessão (5h) e semanal do Claude.",
+  "shell-version": ["49"],
+  "url": ""
+}
