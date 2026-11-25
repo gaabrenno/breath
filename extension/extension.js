@@ -27,9 +27,9 @@ export default class ClaudeLimitsExtension extends Extension {
         this._session = new Soup.Session({timeout: 15});
 
         // Indicador
-        this._button = new PanelMenu.Button(0.5, 'Claude Limits', false);
-        this._button.add_style_class_name('claude-limits-button');
-        const box = new St.BoxLayout({style_class: 'claude-limits-box'});
+        this._button = new PanelMenu.Button(0.5, 'Breath', false);
+        this._button.add_style_class_name('breath-button');
+        const box = new St.BoxLayout({style_class: 'breath-box'});
         this._ringSession = new Ring('5h');
         this._ringWeekly = new Ring('sem');
         box.add_child(this._ringSession);
@@ -61,7 +61,7 @@ export default class ClaudeLimitsExtension extends Extension {
                 this._hidePopup();
         });
 
-        Main.panel.addToStatusArea('claude-limits', this._button, 1, 'left');
+        Main.panel.addToStatusArea('breath', this._button, 1, 'left');
 
         this._view = null;
         this._controller = new Controller({
@@ -71,7 +71,7 @@ export default class ClaudeLimitsExtension extends Extension {
             },
             fetchUsage: token => fetchUsage(this._session, token),
             countTokens: (from, to) => scanner.countTokens(from, to),
-            store: new Store(`${GLib.get_user_cache_dir()}/claude-limits/state.json`),
+            store: new Store(`${GLib.get_user_cache_dir()}/breath/state.json`),
             now: () => Date.now(),
             onUpdate: view => this._render(view),
             onNotify: (title, body) => Main.notify(title, body),
@@ -110,7 +110,7 @@ export default class ClaudeLimitsExtension extends Extension {
         try {
             await controller.refresh();
         } catch (e) {
-            console.warn(`claude-limits: erro no ciclo (${e.name})`);
+            console.warn(`breath: erro no ciclo (${e.name})`);
         }
         if (this._controller !== controller || this._timer)
             return; // desabilitada ou já reagendada no meio tempo

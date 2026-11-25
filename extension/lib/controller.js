@@ -66,7 +66,7 @@ export class Controller {
         } catch (e) {
             if (e instanceof ApiError && e.status === 429)
                 this._interval = Math.min(MAX_INTERVAL_SEC, this._interval * 2);
-            this._log(`claude-limits: API indisponível (${e instanceof ApiError ? e.message : e.name})`);
+            this._log(`breath: API indisponível (${e instanceof ApiError ? e.message : e.name})`);
             return null;
         }
     }
@@ -94,7 +94,7 @@ export class Controller {
         try {
             await this._store.save(state);
         } catch (e) {
-            this._log(`claude-limits: falha ao salvar estado (${e.message})`);
+            this._log(`breath: falha ao salvar estado (${e.message})`);
         }
 
         const off = state.official;

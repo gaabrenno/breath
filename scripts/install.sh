@@ -2,7 +2,7 @@
 # Instala a extensão como symlink para o diretório local do GNOME Shell.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-UUID=claude-limits@simer
+UUID=breath@simer
 DEST="$HOME/.local/share/gnome-shell/extensions/$UUID"
 mkdir -p "$(dirname "$DEST")"
 ln -sfn "$PWD/extension" "$DEST"

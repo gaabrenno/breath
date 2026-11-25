@@ -1,7 +1,7 @@
 {
-  "uuid": "claude-limits@simer",
-  "name": "Claude Limits",
-  "description": "Mostra na barra superior o uso dos limites de sessão (5h) e semanal do Claude.",
+  "uuid": "breath@simer",
+  "name": "Breath",
+  "description": "Claude usage limits in the top bar: 5-hour session and weekly rings, with reset times on hover.",
   "shell-version": ["49"],
   "url": ""
 }

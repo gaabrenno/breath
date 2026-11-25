@@ -9,7 +9,7 @@ const empty = () => ({official: null, notified: []});
 
 /** Persiste o estado (último oficial, calibração, notificações) em JSON. */
 export class Store {
-    /** @param {string} path ex.: ~/.cache/claude-limits/state.json */
+    /** @param {string} path ex.: ~/.cache/breath/state.json */
     constructor(path) {
         this._file = Gio.File.new_for_path(path);
     }

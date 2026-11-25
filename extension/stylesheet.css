@@ -1,7 +1,7 @@
-.claude-limits-button { padding: 0 6px; }
-.claude-limits-box { spacing: 4px; }
+.breath-button { padding: 0 6px; }
+.breath-box { spacing: 4px; }
 
-.claude-limits-popup {
+.breath-popup {
   background-color: #2b2b2b;
   color: #eeeeee;
   border-radius: 14px;
@@ -11,13 +11,13 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   spacing: 6px;
 }
-.claude-limits-title { font-weight: bold; color: #ffffff; padding-bottom: 6px; }
-.claude-limits-row { spacing: 4px; padding-bottom: 8px; }
-.claude-limits-pct { font-weight: bold; }
-.claude-limits-track { height: 6px; background-color: #444444; border-radius: 3px; }
-.claude-limits-fill { height: 6px; border-radius: 3px; }
-.claude-limits-reset { color: #aaaaaa; font-size: 9pt; }
-.claude-limits-footer {
+.breath-title { font-weight: bold; color: #ffffff; padding-bottom: 6px; }
+.breath-row { spacing: 4px; padding-bottom: 8px; }
+.breath-pct { font-weight: bold; }
+.breath-track { height: 6px; background-color: #444444; border-radius: 3px; }
+.breath-fill { height: 6px; border-radius: 3px; }
+.breath-reset { color: #aaaaaa; font-size: 9pt; }
+.breath-footer {
   color: #999999; font-size: 8.5pt;
   border-top: 1px solid #3a3a3a; padding-top: 8px;
 }

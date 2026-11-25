@@ -13,31 +13,31 @@ const cap = s => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 export const UsagePopup = GObject.registerClass(
 class UsagePopup extends St.BoxLayout {
     _init() {
-        super._init({style_class: 'claude-limits-popup', vertical: true, reactive: false, visible: false});
-        this._title = new St.Label({style_class: 'claude-limits-title'});
+        super._init({style_class: 'breath-popup', vertical: true, reactive: false, visible: false});
+        this._title = new St.Label({style_class: 'breath-title'});
         this._rows = new St.BoxLayout({vertical: true});
-        this._footer = new St.Label({style_class: 'claude-limits-footer'});
+        this._footer = new St.Label({style_class: 'breath-footer'});
         this.add_child(this._title);
         this.add_child(this._rows);
         this.add_child(this._footer);
     }
 
     _row(label, r, nowMs) {
-        const box = new St.BoxLayout({vertical: true, style_class: 'claude-limits-row'});
+        const box = new St.BoxLayout({vertical: true, style_class: 'breath-row'});
         const top = new St.BoxLayout();
         top.add_child(new St.Label({text: label, x_expand: true}));
         const pctText = r.pct === null ? '–' : `${r.source === 'estimate' ? '~' : ''}${Math.round(r.pct)}%`;
-        top.add_child(new St.Label({text: pctText, style_class: 'claude-limits-pct'}));
+        top.add_child(new St.Label({text: pctText, style_class: 'breath-pct'}));
         box.add_child(top);
 
-        const track = new St.Widget({style_class: 'claude-limits-track', width: BAR_W});
+        const track = new St.Widget({style_class: 'breath-track', width: BAR_W});
         const fillW = Math.round(BAR_W * Math.min(100, r.pct ?? 0) / 100);
         track.add_child(new St.Widget({
-            style_class: 'claude-limits-fill', width: fillW,
+            style_class: 'breath-fill', width: fillW,
             style: `background-color: ${colorFor(r.pct)};${r.source === 'official' ? '' : ' opacity: 160;'}`,
         }));
         box.add_child(track);
-        box.add_child(new St.Label({text: formatReset(r.resetsAt, nowMs), style_class: 'claude-limits-reset'}));
+        box.add_child(new St.Label({text: formatReset(r.resetsAt, nowMs), style_class: 'breath-reset'}));
         return box;
     }
 

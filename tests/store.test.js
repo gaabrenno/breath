@@ -2,7 +2,7 @@ import GLib from 'gi://GLib';
 import {assertEq} from './assert.js';
 import {Store} from '../extension/lib/store.js';
 
-const tmp = GLib.dir_make_tmp('claude-limits-XXXXXX');
+const tmp = GLib.dir_make_tmp('breath-XXXXXX');
 const EMPTY = {official: null, notified: []};
 
 export default {
