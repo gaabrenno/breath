@@ -53,12 +53,13 @@ function footer(view, nowMs) {
 /** Mesmo conteúdo do painel da extensão (ui/popup.js), em texto. */
 export function detailLines(view, nowMs) {
     const pace = paceWarning(view, nowMs);
-    const row = (label, r) => ({label, pct: pctLabel(r), reset: formatReset(r.resetsAt, nowMs)});
-    const rows = [row('Sessão (janela de 5h)', view.session), row('Semanal (todos os modelos)', view.weekly)];
+    const row = (label, short, r) => ({label, short, pct: pctLabel(r), reset: formatReset(r.resetsAt, nowMs)});
+    const rows = [row('Sessão (janela de 5h)', 'Sessão de 5h', view.session),
+        row('Semanal (todos os modelos)', 'Semanal', view.weekly)];
     if (view.weeklyOpus)
-        rows.push(row('Semanal (Opus)', view.weeklyOpus));
+        rows.push(row('Semanal (Opus)', 'Semanal (Opus)', view.weeklyOpus));
     if (view.weeklySonnet)
-        rows.push(row('Semanal (Sonnet)', view.weeklySonnet));
+        rows.push(row('Semanal (Sonnet)', 'Semanal (Sonnet)', view.weeklySonnet));
     return {
         title: view.plan ? `Limites do Claude · Plano ${cap(view.plan)}` : 'Limites do Claude',
         warning: pace ? (pace.title ? `${pace.title} ${pace.text}` : pace.text) : null,

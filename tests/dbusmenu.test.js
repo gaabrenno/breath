@@ -22,6 +22,11 @@ export default {
         assert(labels.some(l => l.startsWith('Sessão de 5h: 42% · Reseta')), labels.join('|'));
         assert(labels.some(l => l.startsWith('Semanal: 67% · Reseta')), labels.join('|'));
     },
+    'Sonnet sem Opus usa o rótulo certo': () => {
+        const labels = menuItems({...v, weeklySonnet: rd(30)}, now).map(i => i.label);
+        assert(labels.some(l => l.startsWith('Semanal (Sonnet): 30%')), labels.join('|'));
+        assert(!labels.some(l => l.startsWith('Semanal (Opus)')), labels.join('|'));
+    },
     'ids 1..n únicos': () => {
         const ids = menuItems(v, now).map(i => i.id);
         assertEq(ids, ids.map((_, k) => k + 1));

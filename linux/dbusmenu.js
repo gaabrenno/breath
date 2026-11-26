@@ -41,8 +41,6 @@ const IFACE = `<node>
 </interface>
 </node>`;
 
-const ROW_LABELS = ['Sessão de 5h', 'Semanal', 'Semanal (Opus)', 'Semanal (Sonnet)'];
-
 /**
  * Itens do menu: detalhes (desativados), separador e as duas ações.
  * @returns {{id:number, label:string, enabled:boolean, type:'standard'|'separator', action?:string}[]}
@@ -54,7 +52,8 @@ export function menuItems(view, nowMs) {
         info.push(`⚠ ${d.warning}`);
     if (d.secondary)
         info.push(`• ${d.secondary}`);
-    d.rows.forEach((r, k) => info.push(`${ROW_LABELS[k]}: ${r.pct} · ${r.reset}`));
+    for (const r of d.rows)
+        info.push(`${r.short}: ${r.pct} · ${r.reset}`);
     info.push(d.footer);
     const items = info.map(label => ({label, enabled: false, type: 'standard'}));
     items.push({label: '', enabled: true, type: 'separator'});
