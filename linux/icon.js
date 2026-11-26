@@ -1,0 +1,105 @@
+// Desenha o anel da bandeja (mesmo desenho de extension/ui/ring.js, sem a legenda)
+// e devolve os pixels em ARGB32 big-endian, o formato do IconPixmap.
+import GLib from 'gi://GLib';
+import GdkPixbuf from 'gi://GdkPixbuf?version=2.0';
+import Cairo from 'cairo';
+import {colorFor} from '../extension/lib/thresholds.js';
+
+const SIZES = [22, 32, 44];
+const BASE = 22, LINE = 2.6;
+
+function rgba(hex, alpha = 1) {
+    const v = parseInt(hex.slice(1), 16);
+    return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255, alpha];
+}
+
+/** Pixels RGB(A) do GdkPixbuf → ARGB32 big-endian, sem padding de linha. */
+export function rgbaToArgb(pixels, width, height, rowstride, hasAlpha) {
+    const n = hasAlpha ? 4 : 3;
+    const out = new Uint8Array(width * height * 4);
+    let o = 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const i = y * rowstride + x * n;
+            out[o++] = hasAlpha ? pixels[i + 3] : 255;
+            out[o++] = pixels[i];
+            out[o++] = pixels[i + 1];
+            out[o++] = pixels[i + 2];
+        }
+    }
+    return out;
+}
+
+function draw(cr, size, r) {
+    const s = size / BASE;
+    const line = LINE * s;
+    const c = size / 2, rad = size / 2 - line / 2 - 0.5 * s;
+    const {pct, source} = r;
+    const hasData = source !== 'none' && pct !== null && pct !== undefined;
+    const approx = source === 'stale' || source === 'estimate';
+
+    // Trilha cinza: aparece em bandeja clara e escura.
+    cr.setLineWidth(line);
+    cr.setSourceRGBA(0.5, 0.5, 0.5, 0.45);
+    cr.arc(c, c, rad, 0, 2 * Math.PI);
+    cr.stroke();
+
+    if (hasData && pct > 0) {
+        cr.setSourceRGBA(...rgba(colorFor(pct), approx ? 0.6 : 1));
+        cr.setLineCap(Cairo.LineCap.ROUND);
+        if (approx)
+            cr.setDash([2 * s, 1.5 * s], 0);
+        const start = -Math.PI / 2;
+        cr.arc(c, c, rad, start, start + 2 * Math.PI * Math.min(1, pct / 100));
+        cr.stroke();
+        cr.setDash([], 0);
+    }
+
+    const text = hasData ? `${source === 'estimate' ? '~' : ''}${Math.round(pct)}` : '–';
+    cr.selectFontFace('Sans', Cairo.FontSlant.NORMAL, Cairo.FontWeight.BOLD);
+    cr.setFontSize((text.length >= 3 ? 6.5 : 8.5) * s);
+    const ext = cr.textExtents(text);
+    const x = c - ext.width / 2 - ext.xBearing, y = c - ext.height / 2 - ext.yBearing;
+    // Branco com contorno escuro (o cairo do gjs não tem textPath: halo em 8 direções).
+    const d = 0.7 * s;
+    cr.setSourceRGBA(0, 0, 0, 0.55);
+    for (const [dx, dy] of [[-d, 0], [d, 0], [0, -d], [0, d], [-d, -d], [d, d], [-d, d], [d, -d]]) {
+        cr.moveTo(x + dx, y + dy);
+        cr.showText(text);
+    }
+    cr.setSourceRGBA(1, 1, 1, hasData ? 1 : 0.8);
+    cr.moveTo(x, y);
+    cr.showText(text);
+}
+
+function tmpDir() {
+    const base = GLib.getenv('XDG_RUNTIME_DIR') || GLib.get_tmp_dir();
+    const dir = `${base}/breath`;
+    GLib.mkdir_with_parents(dir, 0o700);
+    return dir;
+}
+
+/**
+ * @param {import('../extension/lib/estimate.js').Reading} r
+ * @returns {{width:number, height:number, bytes:Uint8Array}[]}
+ */
+export function ringPixmaps(r) {
+    const dir = tmpDir();
+    return SIZES.map(size => {
+        const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, size, size);
+        const cr = new Cairo.Context(surface);
+        try {
+            draw(cr, size, r);
+        } finally {
+            cr.$dispose();
+        }
+        // O cairo do gjs não expõe os pixels: passa por PNG e GdkPixbuf.
+        const path = `${dir}/ring-${GLib.getenv('BREATH_ICON_TAG') ?? ''}${size}.png`;
+        surface.writeToPNG(path);
+        surface.finish();
+        const pb = GdkPixbuf.Pixbuf.new_from_file(path);
+        const bytes = rgbaToArgb(pb.get_pixels(), pb.get_width(), pb.get_height(), pb.get_rowstride(),
+            pb.get_has_alpha());
+        return {width: size, height: size, bytes};
+    });
+}
