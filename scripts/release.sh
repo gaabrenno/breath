@@ -21,6 +21,13 @@ if [ -n "$latest" ] && [ "$(printf '%s\n%s\n' "$latest" "$tag" | sort -V | tail 
     die "a versão precisa ser maior que $latest (o atualizador sempre instala a maior)."
 fi
 
+# Notas da versão: seção "## vX.Y.Z" do CHANGELOG.md, com "### Novidades" e/ou "### Correções".
+# Viram a Release no GitHub, que o site mostra.
+re_tag="^## ${tag//./\\.}( |\$)"
+notes=$(awk -v re="$re_tag" '$0 ~ re {f=1; next} f && /^## v/ {exit} f' CHANGELOG.md 2>/dev/null)
+printf '%s\n' "$notes" | grep -qE '^### (Novidades|Correções)' ||
+    die "escreva as notas de $tag no CHANGELOG.md (seção '## $tag', com '### Novidades' e/ou '### Correções')."
+
 echo "Rodando os testes..."
 bash -c "${BREATH_TEST_CMD:-TZ=America/Sao_Paulo gjs -m tests/run.js && bash tests/shell/run.sh}" >/dev/null 2>&1 ||
     die "os testes falharam; nada foi publicado."
@@ -34,3 +41,13 @@ fi
 git tag -a "$tag" -m "Breath $tag" || die "não consegui criar a tag; desfaça com: git reset --hard HEAD~1"
 git push -q --atomic origin main "$tag" || die "push falhou; desfaça com: git tag -d $tag && git reset --hard HEAD~1"
 echo "Publicado $tag. As instalações atualizam em até 1h (vale no próximo login)."
+
+nf=$(mktemp)
+printf '%s\n' "$notes" > "$nf"
+if gh release create "$tag" --title "Breath $tag" --notes-file "$nf" >/dev/null 2>&1; then
+    echo "Release $tag criada no GitHub (aparece no site)."
+else
+    echo "Aviso: a versão foi publicada, mas não consegui criar a release no GitHub."
+    echo "Crie com: gh release create $tag --title \"Breath $tag\" --notes-file <arquivo com as notas>"
+fi
+rm -f "$nf"

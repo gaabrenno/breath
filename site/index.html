@@ -124,6 +124,32 @@ caption{text-align:left}
 .faq summary{font-weight:700;cursor:pointer}
 .faq p{color:var(--ink-soft);margin:10px 0 0}
 
+/* novidades */
+.cur{margin:18px 0 0;color:var(--ink-soft)}
+.cur b{color:var(--ink)}
+.cur a{color:var(--ink);text-underline-offset:3px}
+#versoes{max-width:760px}
+.rel-cur{background:var(--paper);border:1.5px solid var(--line);border-radius:18px;padding:26px 28px;margin-bottom:14px}
+.rel-cur header,.rel-old summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rel-cur .ver{font-weight:800;font-size:2rem;letter-spacing:-.02em;line-height:1}
+.rel-old .ver{font-weight:700;font-size:1.1rem}
+.date{color:var(--ink-soft);font-size:.92rem}
+.kind{font-size:.82rem;font-weight:700;padding:4px 10px;border-radius:999px}
+.kind-novidades{background:rgba(59,142,234,.16);color:#9ccaff}
+.kind-correcao{background:rgba(163,177,204,.14);color:var(--ink-soft)}
+.notes{color:var(--ink-soft);margin-top:14px}
+.notes h4{color:var(--ink);font-size:1rem;margin:16px 0 6px}
+.notes h4:first-child{margin-top:4px}
+.notes ul{margin:0;padding-left:20px}
+.notes li{margin:4px 0}
+.notes code{font-family:var(--mono);font-size:.92em;color:var(--ink)}
+.rel-old{border-bottom:1.5px solid var(--line);padding:14px 4px}
+.rel-old summary{cursor:pointer;list-style:none}
+.rel-old summary::-webkit-details-marker{display:none}
+.rel-old summary::after{content:"+";margin-left:auto;color:var(--ink-soft);font-weight:700}
+.rel-old[open] summary::after{content:"−"}
+.rel-fallback{color:var(--ink-soft)}
+.rel-fallback a{color:var(--ink)}
 .star{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap}
 .star p{color:var(--ink-soft);max-width:46ch;margin:0}
 footer{padding:34px 0 50px;color:var(--ink-soft);font-size:.92rem;border-top:1.5px solid var(--line)}
@@ -255,6 +281,7 @@ footer{padding:34px 0 50px;color:var(--ink-soft);font-size:.92rem;border-top:1.5
           <code id="cmd">curl -fsSL https://raw.githubusercontent.com/<wbr>gaabrenno/breath/main/install.sh | bash</code>
           <button type="button" id="copy">Copiar</button>
         </div>
+        <p class="cur">Instala a versão mais recente: <b data-versao>v1.1.1</b>. <a href="#novidades">O que mudou</a></p>
         <ul class="reqs">
           <li>Claude Code instalado e logado com assinatura Pro ou Max</li>
           <li>Funciona com o uso do site, do app e do Claude Code: é tudo o mesmo limite</li>
@@ -266,6 +293,12 @@ footer{padding:34px 0 50px;color:var(--ink-soft);font-size:.92rem;border-top:1.5
         <details><summary>Como desinstalo?</summary><p>Um comando remove tudo. Ele está no README do projeto.</p></details>
       </div>
     </div>
+  </section>
+
+  <section class="s" id="novidades">
+    <h2>Novidades</h2>
+    <p class="intro">Cada versão diz se traz algo novo ou se só corrige o que já existia. As instalações recebem a versão nova sozinhas.</p>
+    <div id="versoes" aria-live="polite"><p class="rel-fallback">Carregando as versões…</p></div>
   </section>
 
   <section class="s star">
@@ -283,6 +316,7 @@ footer{padding:34px 0 50px;color:var(--ink-soft);font-size:.92rem;border-top:1.5
 
   <footer>Breath é um projeto independente, sem ligação com a Anthropic. Feito com Claude Code.</footer>
 </div>
+<script type="module" src="novidades.js"></script>
 <script>
 // O logo do cabeçalho "consome" conforme a página rola: azul, amarelo a partir de 75%, vermelho a partir de 90%.
 (() => {

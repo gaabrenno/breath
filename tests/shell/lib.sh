@@ -23,6 +23,13 @@ echo "systemctl $*" >> "$SYSLOG"
 [ "${2:-}" = show-environment ] && exit "${FAKE_NO_SYSTEMD:-0}"
 exit 0
 S
+    cat > "$STUBS/gh" <<'S'
+#!/usr/bin/env bash
+echo "gh $*" >> "$SYSLOG"
+prev=""
+for a in "$@"; do [ "$prev" = --notes-file ] && cp "$a" "$HOME/gh-notes.md"; prev=$a; done
+exit "${FAKE_GH_FAIL:-0}"
+S
     cat > "$STUBS/gdbus" <<'S'
 #!/usr/bin/env bash
 echo "gdbus $*" >> "$SYSLOG"
