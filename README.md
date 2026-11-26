@@ -303,14 +303,17 @@ journalctl -f -o cat /usr/bin/gnome-shell | grep breath
 
 ### Publicando uma versão
 
-A partir da `main`, com a árvore limpa:
+Primeiro, escreva as notas da versão no `CHANGELOG.md`: uma seção
+`## v1.2.0 (data)` com `### Novidades` (algo novo) e/ou `### Correções` (ajustes).
+Depois, a partir da `main`, com a árvore limpa:
 
 ```bash
-scripts/release.sh 1.1.0
+scripts/release.sh 1.2.0
 ```
 
-O script roda os testes, grava a versão no `metadata.json`, cria a tag `v1.1.0`
-e envia. As instalações recebem a versão em até 1 hora. Versões publicadas não
+O script confere as notas, roda os testes, grava a versão no `metadata.json`, cria
+a tag `v1.2.0`, envia e cria a Release no GitHub com as notas. A seção
+**Novidades** do site mostra as Releases sozinha. As instalações recebem a versão em até 1 hora. Versões publicadas não
 podem ser alteradas nem apagadas, então, para corrigir um problema, publique
 uma versão nova.
 
