@@ -29,10 +29,22 @@ test_missing_git() {
 }
 test_wrong_gnome() {
     sandbox; make_remote v1.0.0
-    FAKE_GNOME=46 WAYLAND_DISPLAY=wayland-0 run_install || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    FAKE_GNOME=44 WAYLAND_DISPLAY=wayland-0 run_install || { cat "$HOME/out.txt"; fail "saída != 0"; }
     assert_contains "$(CONF)" "mode=tray"
     assert_contains "$HOME/out.txt" "AppIndicator"
     [ ! -e "$(LINK)" ] || fail "não deveria criar link da extensão"
+}
+test_gnome46_gets_extension() {
+    sandbox; make_remote v1.0.0
+    FAKE_GNOME=46 WAYLAND_DISPLAY=wayland-0 run_install || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    assert_contains "$(CONF)" "mode=gnome"
+    assert_eq "$(readlink "$(LINK)")" "$BREATH_DIR/extension"
+}
+test_flag_gnome_on_old_gnome_fails() {
+    sandbox; make_remote v1.0.0
+    FAKE_GNOME=44 bash "$REPO_ROOT/install.sh" --gnome > "$HOME/out.txt" 2>&1 && fail "deveria falhar"
+    assert_contains "$HOME/out.txt" "GNOME Shell 45 a 49"
+    assert_nothing_created
 }
 test_no_credentials() {
     sandbox; make_remote v1.0.0

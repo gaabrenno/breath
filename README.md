@@ -44,8 +44,8 @@ O instalador descobre o seu ambiente e instala o que cabe nele:
 
 | Ambiente | O que você ganha |
 |---|---|
-| GNOME 49 | Os anéis na barra superior (extensão do GNOME) |
-| KDE Plasma, XFCE, Cinnamon, MATE, Budgie, outras versões do GNOME | Dois ícones na bandeja, um por anel |
+| GNOME 45 a 49 | Os anéis na barra superior (extensão do GNOME) |
+| KDE Plasma, XFCE, Cinnamon, MATE, Budgie, GNOME mais antigo | Dois ícones na bandeja, um por anel |
 | Hyprland, Sway, i3 e afins | O comando `breath`, para a sua barra de status |
 
 O comando `breath` vem em todos os modos. Para escolher o modo na mão:
@@ -85,10 +85,11 @@ no claude.ai.
 
 ### Na bandeja
 
-Fora do GNOME 49, o Breath aparece como dois ícones na bandeja: a sessão de 5h e
-a semana, cada um com a % no centro e as mesmas cores. Passe o mouse para ver os
-detalhes, ou clique para abrir o menu com os detalhes, **Atualizar agora** e
-**Abrir uso no claude.ai**.
+Fora do GNOME, o Breath aparece como dois ícones na bandeja: a sessão de 5h e
+a semana, cada um com a % no centro e as mesmas cores. **Clique** em um deles
+para abrir o painel de detalhes, no mesmo visual da extensão (ritmo, barras e
+horários de reset). O clique direito abre o menu com **Atualizar agora** e
+**Abrir uso no claude.ai**. O painel usa o GTK4, que quase toda distro já traz.
 
 ### Comando `breath`
 
@@ -197,7 +198,7 @@ como ir parar em outro lugar. Tudo o que ele guarda fica em
 <summary><strong>Funciona na minha distro?</strong></summary>
 
 Funciona em qualquer Linux com sessão gráfica (veja [Onde funciona](#onde-funciona)).
-No GNOME 49 ele vira uma extensão; nos outros ambientes, ícones na bandeja.
+No GNOME 45 a 49 ele vira uma extensão; nos outros ambientes, ícones na bandeja.
 
 Fora do GNOME, o Breath precisa do `gjs`. Se faltar, o instalador avisa e
 mostra o comando:
@@ -209,8 +210,9 @@ mostra o comando:
 | Arch | `sudo pacman -S gjs libsoup3` |
 | openSUSE | `sudo zypper install gjs` |
 
-Em outras versões do GNOME, os ícones da bandeja precisam da extensão
-"AppIndicator and KStatusNotifierItem Support" (o Ubuntu já traz). A bandeja
+Em GNOME anterior ao 45, os ícones da bandeja precisam da extensão
+"AppIndicator and KStatusNotifierItem Support" (o Ubuntu já traz); lá, o clique
+abre o menu, e o painel fica em **Ver detalhes**. A bandeja
 antiga do X11 (a do i3bar, por exemplo) não é suportada: nesse caso, use o
 comando `breath`.
 
@@ -254,8 +256,8 @@ curl -fsSL https://raw.githubusercontent.com/gaabrenno/breath/main/install.sh | 
 ```
 
 Antes de mexer em qualquer coisa, o instalador confere se você tem `git`, o
-Claude Code logado e, fora do GNOME 49, o `gjs`, e explica o que falta, se for o
-caso. Na bandeja, os ícones aparecem na hora. No GNOME 49, **encerre a sessão e
+Claude Code logado e, fora do GNOME, o `gjs`, e explica o que falta, se for o
+caso. Na bandeja, os ícones aparecem na hora. No GNOME, **encerre a sessão e
 entre de novo** para os anéis aparecerem na barra.
 
 ---
