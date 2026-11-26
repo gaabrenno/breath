@@ -15,13 +15,18 @@ const LABELS = {session: 'Sessão de 5h', weekly: 'Semanal'};
  * Todas as dependências são injetadas para permitir testes fora do Shell.
  */
 export class Controller {
+    /**
+     * reloadState: relê o estado do disco a cada consulta. Fora do Shell, a bandeja
+     * e o comando `breath` dividem o mesmo state.json (a extensão não usa).
+     */
     constructor({readCredentialsText, fetchUsage, countTokens, store, now, onUpdate, onNotify,
-        log = m => console.warn(m)}) {
+        log = m => console.warn(m), reloadState = false}) {
         Object.assign(this, {_readCreds: readCredentialsText, _fetch: fetchUsage, _count: countTokens,
             _store: store, _now: now, _onUpdate: onUpdate, _onNotify: onNotify, _log: log});
         this._interval = BASE_INTERVAL_SEC;
         this._state = null;
         this._running = null;
+        this._reloadState = reloadState;
     }
 
     get nextIntervalSec() {
@@ -73,6 +78,8 @@ export class Controller {
 
     async _refresh() {
         const now = this._now();
+        if (this._reloadState)
+            this._state = null;
         this._state ??= await this._store.load();
         const state = this._state;
 

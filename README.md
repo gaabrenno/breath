@@ -5,7 +5,7 @@
 <h1 align="center">Breath</h1>
 
 <p align="center">
-  <strong>Saiba quanto fôlego ainda resta no seu Claude, direto na barra do Ubuntu.</strong><br>
+  <strong>Saiba quanto fôlego ainda resta no seu Claude, direto na barra do seu Linux.</strong><br>
   Os limites da sessão de 5h e da semana, sempre à vista, com aviso antes de acabar.
 </p>
 
@@ -17,7 +17,7 @@
 curl -fsSL https://raw.githubusercontent.com/gaabrenno/breath/main/install.sh | bash
 ```
 
-<p align="center"><sub>GNOME 49 · Claude Code com assinatura Pro ou Max · sem login, sem configuração</sub></p>
+<p align="center"><sub>Linux (GNOME, KDE, XFCE, Cinnamon…) · Claude Code com assinatura Pro ou Max · sem login, sem configuração</sub></p>
 
 ---
 
@@ -33,10 +33,26 @@ esgotar seu limite semanal sexta-feira de madrugada, antes da redefinição de
 segunda-feira."*
 
 🔑 **Sem login, sem configuração.** Ele aproveita a sessão que o Claude Code já
-tem no seu computador. É instalar, entrar de novo na sessão e pronto.
+tem no seu computador. É instalar e pronto.
 
 🔄 **Sempre atualizado.** Versões novas chegam sozinhas, com uma notificação
 avisando.
+
+## Onde funciona
+
+O instalador descobre o seu ambiente e instala o que cabe nele:
+
+| Ambiente | O que você ganha |
+|---|---|
+| GNOME 45 a 49 | Os anéis na barra superior (extensão do GNOME) |
+| KDE Plasma, XFCE, Cinnamon, MATE, Budgie, GNOME mais antigo | Dois ícones na bandeja, um por anel |
+| Hyprland, Sway, i3 e afins | O comando `breath`, para a sua barra de status |
+
+O comando `breath` vem em todos os modos. Para escolher o modo na mão:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaabrenno/breath/main/install.sh | bash -s -- --tray   # ou --gnome, --cli
+```
 
 ## Como funciona
 
@@ -66,6 +82,63 @@ uma vez por janela.
 
 **Clicando nos anéis**, você pode atualizar na hora ou abrir a página de uso
 no claude.ai.
+
+### Na bandeja
+
+Fora do GNOME, o Breath aparece como dois ícones na bandeja: a sessão de 5h e
+a semana, cada um com a % no centro e as mesmas cores. **Clique** em um deles
+para abrir o painel de detalhes, no mesmo visual da extensão (ritmo, barras,
+horários de reset e os botões **Atualizar agora** e **Abrir uso no claude.ai**).
+No KDE, o painel abre junto do mouse. O clique direito abre um menu com as
+mesmas ações. O painel usa o GTK4, que quase toda distro já traz.
+
+### Comando `breath`
+
+```
+$ breath
+Limites do Claude · Plano Max
+Sessão (janela de 5h)        42%  Reseta às 15:00 · em 2h 28min
+Semanal (todos os modelos)   67%  Reseta seg 30 nov, 09:00 · em 3d 15h
+Fonte: API /usage · atualizado há 1min
+
+$ breath --short      # 5h 42% · sem 67%
+$ breath --waybar     # JSON para a waybar
+$ breath --json       # a leitura completa, para scripts
+$ breath refresh      # consulta agora
+```
+
+O comando reaproveita a última leitura por até 150 segundos, então a sua barra
+pode chamá-lo com frequência sem sobrecarregar nada.
+
+**waybar** (`config.jsonc`):
+
+```jsonc
+"custom/breath": {
+    "exec": "breath --waybar",
+    "return-type": "json",
+    "interval": 30
+}
+```
+
+A `class` vem como `ok`, `warn` (75% ou mais), `crit` (90% ou mais) ou `stale`
+(estimativa ou sem dados), para você colorir no `style.css`.
+
+**polybar**:
+
+```ini
+[module/breath]
+type = custom/script
+exec = breath --short
+interval = 30
+```
+
+**i3blocks**:
+
+```ini
+[breath]
+command=breath --short
+interval=30
+```
 
 ## Perguntas frequentes
 
@@ -125,27 +198,44 @@ como ir parar em outro lugar. Tudo o que ele guarda fica em
 <details>
 <summary><strong>Funciona na minha distro?</strong></summary>
 
-Por enquanto, o Breath funciona no **GNOME 49** (testado no Ubuntu 25.10). O
-instalador confere a versão e avisa se não for compatível. O
-suporte a outras versões do GNOME está a caminho.
+Funciona em qualquer Linux com sessão gráfica (veja [Onde funciona](#onde-funciona)).
+No GNOME 45 a 49 ele vira uma extensão; nos outros ambientes, ícones na bandeja.
 
-Em distros sem systemd, a extensão funciona, mas as atualizações automáticas
-ficam desligadas.
+Fora do GNOME, o Breath precisa do `gjs`. Se faltar, o instalador avisa e
+mostra o comando:
+
+| Distro | Comando |
+|---|---|
+| Ubuntu, Debian | `sudo apt install gjs gir1.2-soup-3.0 gir1.2-gdkpixbuf-2.0` |
+| Fedora | `sudo dnf install gjs` |
+| Arch | `sudo pacman -S gjs libsoup3` |
+| openSUSE | `sudo zypper install gjs` |
+
+Em GNOME anterior ao 45, os ícones da bandeja precisam da extensão
+"AppIndicator and KStatusNotifierItem Support" (o Ubuntu já traz). Lá, o clique
+também abre o painel, mas ele aparece onde o GNOME decidir, e o primeiro clique
+depois de abrir só fecha um menu invisível da AppIndicator. A bandeja
+antiga do X11 (a do i3bar, por exemplo) não é suportada: nesse caso, use o
+comando `breath`.
+
+Sem systemd, a própria bandeja procura as atualizações. No modo só com o
+comando, as atualizações automáticas ficam desligadas.
 </details>
 
 <details>
 <summary><strong>Como funcionam as atualizações?</strong></summary>
 
 A cada hora, e 2 minutos depois do login, o Breath procura uma versão nova. Se
-houver, ele baixa e avisa: *"Breath atualizado para vX.Y.Z — vale na próxima
-sessão"*. Sem internet, ele só tenta de novo mais tarde.
+houver, ele baixa e avisa: *"Breath atualizado para vX.Y.Z"*. Na bandeja e no
+comando, a versão nova já vale na hora; na extensão do GNOME, ela vale depois de
+sair e entrar de novo na sessão. Sem internet, ele só tenta de novo mais tarde.
 
 ```bash
 systemctl --user start breath-update.service          # procurar agora
 systemctl --user disable --now breath-update.timer    # desligar as atualizações
 ```
 
-Como as versões novas rodam no seu GNOME, só instale se confiar neste
+Como as versões novas rodam no seu computador, só instale se confiar neste
 repositório. As versões publicadas são protegidas: depois de lançada, uma
 versão nunca é alterada.
 </details>
@@ -167,9 +257,10 @@ Breath. Ele não toca no seu login do Claude Code.
 curl -fsSL https://raw.githubusercontent.com/gaabrenno/breath/main/install.sh | bash
 ```
 
-Antes de mexer em qualquer coisa, o instalador confere se você tem GNOME 49,
-`git` e o Claude Code logado, e explica o que falta, se for o caso. Depois,
-**encerre a sessão e entre de novo**, e os anéis aparecem na barra.
+Antes de mexer em qualquer coisa, o instalador confere se você tem `git`, o
+Claude Code logado e, fora do GNOME, o `gjs`, e explica o que falta, se for o
+caso. Na bandeja, os ícones aparecem na hora. No GNOME, **encerre a sessão e
+entre de novo** para os anéis aparecerem na barra.
 
 ---
 
@@ -192,6 +283,14 @@ pacote `mutter-dev-bin`):
 
 ```bash
 dbus-run-session gnome-shell --devkit --wayland
+```
+
+Para a bandeja e o comando, rode direto da pasta (a bandeja nova substitui a
+que estiver aberta; os avisos saem no terminal):
+
+```bash
+gjs -m linux/tray.js
+bin/breath --waybar
 ```
 
 Os logs da extensão:
@@ -220,6 +319,8 @@ uma versão nova.
 | `extension/lib/` | Lógica: credenciais, API, contagem de tokens nos logs, estimativa, aviso de ritmo, notificações e ciclo de atualização |
 | `extension/ui/` | O anel (Cairo) e o painel do hover |
 | `extension/extension.js` | Liga tudo na barra do GNOME |
+| `linux/` | Bandeja (StatusNotifierItem e dbusmenu), comando `breath`, textos e cache da leitura |
+| `bin/breath` | O comando `breath` |
 | `install.sh`, `uninstall.sh` | Instalador e desinstalador de um comando |
 | `scripts/` | Atualizador, publicação de versões, `dev-link` e teste da API |
 | `systemd/` | Timer de atualização automática |

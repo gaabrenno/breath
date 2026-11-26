@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Breath: instalador de um comando.
 #   curl -fsSL https://raw.githubusercontent.com/gaabrenno/breath/main/install.sh | bash
+#   ... | bash -s -- --tray      (força um modo: --gnome, --tray ou --cli)
 # Tudo fica dentro de main(), chamada só na última linha: um download
 # interrompido no meio não executa nada.
 
@@ -11,21 +12,83 @@ main() {
     local uuid=breath@simer
     local link=$HOME/.local/share/gnome-shell/extensions/$uuid
     local units=$HOME/.config/systemd/user
+    local config=${XDG_CONFIG_HOME:-$HOME/.config}
+    local autostart=$config/autostart/breath.desktop
+    local bin=$HOME/.local/bin/breath
 
     say() { printf '%s\n' "$*"; }
     die() { printf 'Erro: %s\n' "$*" >&2; exit 1; }
 
-    # 1) Pré-requisitos, antes de criar qualquer arquivo.
+    # Desativa a extensão (fallback: tira da lista do gsettings).
+    disable_extension() {
+        gnome-extensions disable "$uuid" >/dev/null 2>&1 && return
+        local list
+        list=$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || true)
+        if [[ $list == *"'$uuid'"* ]]; then
+            list=${list//", '$uuid'"/}
+            list=${list//"'$uuid', "/}
+            list=${list//"'$uuid'"/}
+            [[ $list == "[]" ]] && list="@as []"
+            gsettings set org.gnome.shell enabled-extensions "$list"
+        fi
+    }
+
+    # 1) Modo e pré-requisitos, antes de criar qualquer arquivo.
+    local mode=""
+    local arg
+    for arg in "$@"; do
+        case $arg in
+            --gnome|--tray|--cli) mode=${arg#--} ;;
+            *) die "opção desconhecida: $arg (use --gnome, --tray ou --cli)" ;;
+        esac
+    done
+
     command -v git >/dev/null 2>&1 ||
         die "o git não está instalado. Instale com: sudo apt install git"
-    local gs
+
+    local gs in_gnome=0 gnome_ok=0 no_tray=0
     gs=$(gnome-shell --version 2>/dev/null || true)
-    [[ $gs =~ ^GNOME\ Shell\ 49(\.|$) ]] ||
-        die "o Breath requer GNOME Shell 49 (encontrado: ${gs:-nenhum})."
+    [[ ${XDG_CURRENT_DESKTOP:-} == *GNOME* ]] && in_gnome=1
+    # A extensão roda do GNOME 45 (extensões em módulos ES) ao 49.
+    [[ $gs =~ ^GNOME\ Shell\ 4[5-9](\.|$) ]] && gnome_ok=1
+    if [ -z "$mode" ]; then
+        if [ $in_gnome = 1 ] && [ $gnome_ok = 1 ]; then
+            mode=gnome
+        elif [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
+            # Só há onde pôr os ícones se existir uma bandeja StatusNotifierItem
+            # (a do i3bar, por exemplo, é a antiga do X11).
+            if gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
+                --method org.freedesktop.DBus.NameHasOwner org.kde.StatusNotifierWatcher 2>/dev/null | grep -q true; then
+                mode=tray
+            else
+                mode=cli
+                no_tray=1
+            fi
+        else
+            mode=cli
+        fi
+    fi
+
+    if [ "$mode" = gnome ]; then
+        [ $gnome_ok = 1 ] ||
+            die "a extensão do Breath requer GNOME Shell 45 a 49 (encontrado: ${gs:-nenhum}). Use --tray para os ícones na bandeja."
+    fi
     grep -q '"claudeAiOauth"' "$HOME/.claude/.credentials.json" 2>/dev/null ||
         die "não encontrei o login do Claude Code. Instale o Claude Code, rode 'claude' e use /login."
-    if [ -e "$link" ] && [ ! -L "$link" ]; then
+    if [ "$mode" = gnome ] && [ -e "$link" ] && [ ! -L "$link" ]; then
         die "já existe uma pasta ou arquivo em $link (instalação manual?). Remova e rode o instalador de novo."
+    fi
+    if [ "$mode" != gnome ]; then
+        gjs -c "imports.gi.versions.Soup='3.0'; imports.gi.versions.GdkPixbuf='2.0'; imports.gi.Soup; imports.gi.GdkPixbuf" \
+            >/dev/null 2>&1 || die "$(cat <<'MSG'
+o Breath precisa do gjs com as bibliotecas Soup 3 e GdkPixbuf. Instale com:
+  Ubuntu/Debian: sudo apt install gjs gir1.2-soup-3.0 gir1.2-gdkpixbuf-2.0
+  Fedora:        sudo dnf install gjs
+  Arch:          sudo pacman -S gjs libsoup3
+  openSUSE:      sudo zypper install gjs
+e rode o instalador de novo.
+MSG
+)"
     fi
 
     # 2) Clone (ou atualização) e checkout da última versão publicada.
@@ -44,43 +107,108 @@ main() {
         die "não consegui usar a versão $tag"
     git -C "$dir" clean -fdq
 
-    # 3) Link da extensão.
-    mkdir -p "$(dirname "$link")"
-    ln -sfn "$dir/extension" "$link"
-
-    # 4) Timer de atualização automática.
-    mkdir -p "$units"
-    sed "s|@BREATH_DIR@|$dir|g" "$dir/systemd/breath-update.service" > "$units/breath-update.service"
-    cp "$dir/systemd/breath-update.timer" "$units/breath-update.timer"
-    systemctl --user daemon-reload
-    systemctl --user enable --now breath-update.timer >/dev/null 2>&1 ||
-        say "Aviso: não consegui ligar o timer de atualização (systemctl --user)."
-
-    # 5) Ativa a extensão (no Wayland, antes do relogin, cai no gsettings).
-    #    disabled-extensions tem precedência no GNOME 49: tira o Breath de lá.
-    if ! gnome-extensions enable "$uuid" >/dev/null 2>&1; then
-        local list
-        if list=$(gsettings get org.gnome.shell disabled-extensions 2>/dev/null) && [[ $list == *"'$uuid'"* ]]; then
-            list=${list//", '$uuid'"/}
-            list=${list//"'$uuid', "/}
-            list=${list//"'$uuid'"/}
-            [[ $list == "[]" ]] && list="@as []"
-            gsettings set org.gnome.shell disabled-extensions "$list"
+    # 3) O que é de cada modo (e limpeza do modo anterior, numa reinstalação).
+    if [ "$mode" = gnome ]; then
+        if [ -e "$autostart" ]; then
+            rm -f "$autostart"
+            pkill -f "$dir/linux/tray.js" >/dev/null 2>&1 || true
         fi
-        list=$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null) || list=SKIP
-        if [[ $list != SKIP && $list != *"'$uuid'"* ]]; then
-            if [[ $list == "@as []" || $list == "[]" ]]; then
-                list="['$uuid']"
-            else
-                list="${list%]}, '$uuid']"
+        mkdir -p "$(dirname "$link")"
+        ln -sfn "$dir/extension" "$link"
+        # Ativa a extensão (no Wayland, antes do relogin, cai no gsettings).
+        # disabled-extensions tem precedência no GNOME 49: tira o Breath de lá.
+        if ! gnome-extensions enable "$uuid" >/dev/null 2>&1; then
+            local list
+            if list=$(gsettings get org.gnome.shell disabled-extensions 2>/dev/null) && [[ $list == *"'$uuid'"* ]]; then
+                list=${list//", '$uuid'"/}
+                list=${list//"'$uuid', "/}
+                list=${list//"'$uuid'"/}
+                [[ $list == "[]" ]] && list="@as []"
+                gsettings set org.gnome.shell disabled-extensions "$list"
             fi
-            gsettings set org.gnome.shell enabled-extensions "$list"
+            list=$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null) || list=SKIP
+            if [[ $list != SKIP && $list != *"'$uuid'"* ]]; then
+                if [[ $list == "@as []" || $list == "[]" ]]; then
+                    list="['$uuid']"
+                else
+                    list="${list%]}, '$uuid']"
+                fi
+                gsettings set org.gnome.shell enabled-extensions "$list"
+            fi
+        fi
+    else
+        if [ -L "$link" ]; then
+            disable_extension
+            rm -f "$link"
+        fi
+        if [ "$mode" = tray ]; then
+            mkdir -p "$(dirname "$autostart")"
+            cat > "$autostart" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Breath
+Comment=Limites do Claude na bandeja
+Exec=gjs -m $dir/linux/tray.js
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+EOF
+            setsid -f gjs -m "$dir/linux/tray.js" >/dev/null 2>&1 < /dev/null || true
+        elif [ -e "$autostart" ]; then
+            rm -f "$autostart"
+            pkill -f "$dir/linux/tray.js" >/dev/null 2>&1 || true
         fi
     fi
 
+    # 4) Comando `breath`.
+    if [ -L "$bin" ] && [[ $(readlink "$bin") == "$dir"/* ]] || { [ ! -e "$bin" ] && [ ! -L "$bin" ]; }; then
+        mkdir -p "$(dirname "$bin")"
+        ln -sfn "$dir/bin/breath" "$bin"
+    else
+        say "Aviso: já existe $bin e não é do Breath; deixei como está. Use $dir/bin/breath."
+    fi
+    case ":$PATH:" in
+        *":$HOME/.local/bin:"*) ;;
+        *) say "Aviso: ~/.local/bin não está no seu PATH. Adicione para usar o comando breath." ;;
+    esac
+
+    # 5) Atualização automática.
+    local updater
+    if systemctl --user show-environment >/dev/null 2>&1; then
+        updater=systemd
+        mkdir -p "$units"
+        sed "s|@BREATH_DIR@|$dir|g" "$dir/systemd/breath-update.service" > "$units/breath-update.service"
+        cp "$dir/systemd/breath-update.timer" "$units/breath-update.timer"
+        systemctl --user daemon-reload
+        systemctl --user enable --now breath-update.timer >/dev/null 2>&1 ||
+            say "Aviso: não consegui ligar o timer de atualização (systemctl --user)."
+    elif [ "$mode" = tray ]; then
+        updater=tray
+    else
+        updater=none
+        say "Aviso: sem systemd, as atualizações automáticas ficam desligadas. Para atualizar, rode o instalador de novo."
+    fi
+
+    # 6) Modo instalado (fora do clone: o git clean do atualizador apagaria).
+    mkdir -p "$config/breath"
+    printf 'mode=%s\nupdater=%s\n' "$mode" "$updater" > "$config/breath/install.conf"
+
     say "Breath $tag instalado em $dir."
-    say "Atualizações automáticas ligadas (a cada hora)."
-    say "Encerre a sessão e entre de novo para ativar a extensão."
+    [ "$updater" = none ] || say "Atualizações automáticas ligadas (a cada hora)."
+    case $mode in
+        gnome)
+            say "Encerre a sessão e entre de novo para ativar a extensão." ;;
+        tray)
+            [ $in_gnome = 1 ] && say "No GNOME, os ícones precisam da extensão \"AppIndicator and KStatusNotifierItem Support\" ligada (o Ubuntu já traz)."
+            say "Os ícones já devem aparecer na bandeja." ;;
+        cli)
+            if [ $no_tray = 1 ]; then
+                say "Não encontrei uma bandeja compatível no seu painel, então instalei só o comando breath."
+                [ $in_gnome = 1 ] && say "No GNOME, ligue a extensão \"AppIndicator and KStatusNotifierItem Support\"."
+                say "Se o seu painel tiver uma bandeja compatível, rode o instalador de novo com --tray."
+            fi
+            say "Use: breath   (ou breath --short / breath --waybar)"
+            say "Na waybar: \"custom/breath\": {\"exec\": \"breath --waybar\", \"return-type\": \"json\", \"interval\": 30}" ;;
+    esac
 }
 
 main "$@"

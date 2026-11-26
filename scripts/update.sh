@@ -17,7 +17,13 @@ current=$(git describe --tags --exact-match 2>/dev/null || true)
 if [ "$latest" != "$current" ]; then
     git -c advice.detachedHead=false checkout --quiet --force "$latest" || exit 0
     git clean -fdq
-    notify-send "Breath atualizado para $latest — vale na próxima sessão" 2>/dev/null || true
+    # Fora do GNOME, a bandeja se reinicia sozinha ao ver o checkout novo.
+    mode=$(sed -n 's/^mode=//p' "${XDG_CONFIG_HOME:-$HOME/.config}/breath/install.conf" 2>/dev/null)
+    if [ "${mode:-gnome}" = gnome ]; then
+        notify-send "Breath atualizado para $latest — vale na próxima sessão" 2>/dev/null || true
+    else
+        notify-send "Breath atualizado para $latest" 2>/dev/null || true
+    fi
     echo "Breath atualizado para $latest"
 fi
 exit 0

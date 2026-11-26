@@ -12,9 +12,27 @@ sandbox() {
     export STUBS=$HOME/stubs SYSLOG=$HOME/sys.log BREATH_DIR=$HOME/.local/share/breath
     mkdir -p "$STUBS"
     : > "$SYSLOG"
-    for cmd in systemctl notify-send; do
+    export XDG_CURRENT_DESKTOP=GNOME
+    unset WAYLAND_DISPLAY DISPLAY XDG_CONFIG_HOME XDG_CACHE_HOME
+    for cmd in notify-send setsid pkill; do
         printf '#!/usr/bin/env bash\necho "%s $*" >> "$SYSLOG"\n' "$cmd" > "$STUBS/$cmd"
     done
+    cat > "$STUBS/systemctl" <<'S'
+#!/usr/bin/env bash
+echo "systemctl $*" >> "$SYSLOG"
+[ "${2:-}" = show-environment ] && exit "${FAKE_NO_SYSTEMD:-0}"
+exit 0
+S
+    cat > "$STUBS/gdbus" <<'S'
+#!/usr/bin/env bash
+echo "gdbus $*" >> "$SYSLOG"
+echo "(${FAKE_WATCHER:-true},)"
+S
+    cat > "$STUBS/gjs" <<'S'
+#!/usr/bin/env bash
+echo "gjs $*" >> "$SYSLOG"
+exit "${FAKE_GJS_FAIL:-0}"
+S
     cat > "$STUBS/gnome-shell" <<'S'
 #!/usr/bin/env bash
 echo "GNOME Shell ${FAKE_GNOME:-49}.0"

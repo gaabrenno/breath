@@ -2,7 +2,7 @@
   "uuid": "breath@simer",
   "name": "Breath",
   "description": "Claude usage limits in the top bar: 5-hour session and weekly rings, with reset times on hover.",
-  "shell-version": ["49"],
+  "shell-version": ["45", "46", "47", "48", "49"],
   "version-name": "1.0.0",
   "url": ""
 }
