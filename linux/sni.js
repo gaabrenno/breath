@@ -37,6 +37,11 @@ const IFACE = `<node>
 
 let counter = 0;
 
+/** Espera (s) antes de tentar registrar de novo: 2, 4, 8… até 60. */
+export function retryDelay(attempt) {
+    return Math.min(60, 2 ** (attempt + 1));
+}
+
 export class StatusNotifierItem {
     /**
      * label: texto curto ao lado do ícone, nos painéis que aceitam (ex.: AppIndicator do GNOME).
@@ -57,6 +62,8 @@ export class StatusNotifierItem {
         this._impl.export(conn, PATH);
         this._ownId = 0;
         this._watchId = 0;
+        this._retry = 0;
+        this._attempt = 0;
     }
 
     /** Pede o nome no barramento e se registra no watcher sempre que ele aparecer. */
@@ -64,7 +71,10 @@ export class StatusNotifierItem {
         this._ownId = Gio.bus_own_name_on_connection(this._conn, this._busName, Gio.BusNameOwnerFlags.NONE,
             () => {
                 this._watchId = Gio.bus_watch_name_on_connection(this._conn, WATCHER,
-                    Gio.BusNameWatcherFlags.NONE, () => this._registerWithWatcher(), null);
+                    Gio.BusNameWatcherFlags.NONE, () => {
+                        this._attempt = 0;
+                        this._registerWithWatcher();
+                    }, () => this._cancelRetry());
             }, null);
     }
 
@@ -75,9 +85,24 @@ export class StatusNotifierItem {
                 try {
                     c.call_finish(res);
                 } catch (e) {
-                    printerr(`breath: não consegui registrar o ícone na bandeja (${e.message})`);
+                    // Ex.: no login, o nome do watcher aparece antes do objeto existir.
+                    if (this._attempt === 0)
+                        printerr(`breath: não consegui registrar o ícone na bandeja (${e.message}); tentando de novo`);
+                    this._cancelRetry();
+                    this._retry = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, retryDelay(this._attempt++), () => {
+                        this._retry = 0;
+                        this._registerWithWatcher();
+                        return GLib.SOURCE_REMOVE;
+                    });
                 }
             });
+    }
+
+    _cancelRetry() {
+        if (this._retry) {
+            GLib.source_remove(this._retry);
+            this._retry = 0;
+        }
     }
 
     /** @param {{pixmaps:{width:number,height:number,bytes:Uint8Array}[], tooltip:{title:string, body:string}}} u */
@@ -89,6 +114,7 @@ export class StatusNotifierItem {
     }
 
     destroy() {
+        this._cancelRetry();
         if (this._watchId)
             Gio.bus_unwatch_name(this._watchId);
         if (this._ownId)

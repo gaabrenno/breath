@@ -1,6 +1,6 @@
 import {assert, assertEq} from './assert.js';
 import Gio from 'gi://Gio';
-import {rgbaToArgb, ringPixmaps, iconPath} from '../linux/icon.js';
+import {rgbaToArgb, ringPixmaps, iconPath, grayInside} from '../linux/icon.js';
 import {colorFor} from '../extension/lib/thresholds.js';
 
 const rd = (pct, source = 'official') => ({pct, resetsAt: null, source, ageMs: 0, deltaPct: 0});
@@ -29,6 +29,14 @@ export default {
                 Math.abs(big[i + 3] - b) <= 8;
         }
         assert(found, 'nenhum pixel com a cor do anel');
+    },
+    'grayInside tira a cor só dentro do raio': () => {
+        // 3x1 ARGB: pixel do meio colorido dentro do raio, os das pontas fora.
+        const px = new Uint8Array([255, 200, 0, 0, 255, 90, 120, 30, 255, 0, 0, 200]);
+        grayInside(px, 3, 1, 0.6);
+        assertEq([...px.slice(4, 8)], [255, 120, 120, 120]);
+        assertEq([...px.slice(0, 4)], [255, 200, 0, 0]);
+        assertEq([...px.slice(8, 12)], [255, 0, 0, 200]);
     },
     'PNG temporário é por processo': () => {
         const pid = String(new Gio.Credentials().get_unix_pid());

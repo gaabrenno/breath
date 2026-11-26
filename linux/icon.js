@@ -32,6 +32,29 @@ export function rgbaToArgb(pixels, width, height, rowstride, hasAlpha) {
     return out;
 }
 
+/**
+ * Deixa em tons de cinza (pelo maior canal) os pixels dentro do disco central.
+ * O cairo desenha o texto com suavização por subpixel, que deixa franjas coloridas.
+ * @param {Uint8Array} argb ARGB32 big-endian, alterado no lugar
+ * @param {number} radiusFrac raio em fração da metade da largura
+ */
+export function grayInside(argb, width, height, radiusFrac) {
+    const cx = width / 2, cy = height / 2, r2 = (radiusFrac * width / 2) ** 2;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 > r2)
+                continue;
+            const i = (y * width + x) * 4;
+            const v = Math.max(argb[i + 1], argb[i + 2], argb[i + 3]);
+            argb[i + 1] = argb[i + 2] = argb[i + 3] = v;
+        }
+    }
+    return argb;
+}
+
+// Disco do número: até onde começa o anel (ver draw), com folga.
+const DISC_FRAC = 0.8;
+
 function draw(cr, size, r) {
     const s = size / BASE;
     const line = LINE * s;
@@ -99,8 +122,8 @@ export function ringPixmaps(r) {
         surface.writeToPNG(path);
         surface.finish();
         const pb = GdkPixbuf.Pixbuf.new_from_file(path);
-        const bytes = rgbaToArgb(pb.get_pixels(), pb.get_width(), pb.get_height(), pb.get_rowstride(),
-            pb.get_has_alpha());
+        const bytes = grayInside(rgbaToArgb(pb.get_pixels(), pb.get_width(), pb.get_height(),
+            pb.get_rowstride(), pb.get_has_alpha()), size, size, DISC_FRAC);
         return {width: size, height: size, bytes};
     });
 }

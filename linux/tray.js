@@ -17,6 +17,12 @@ const MENU_PATH = '/MenuBar';
 const USAGE_PAGE = 'https://claude.ai/settings/usage';
 const RESTART_DELAY_SEC = 5;
 
+// Títulos em ordem alfabética: o KDE ordena a bandeja pelo título ("5" vem antes de "s").
+export const ITEMS = [
+    {kind: 'session', id: 'breath-session', title: 'Breath · 5h (sessão)', label: '5h'},
+    {kind: 'weekly', id: 'breath-weekly', title: 'Breath · semana', label: 'sem'},
+];
+
 /** Roda fn; um erro vira uma linha de log em vez de derrubar a bandeja. */
 export function safely(what, fn, log = m => printerr(m)) {
     try {
@@ -53,8 +59,9 @@ class Tray {
             this._menus.push(new DBusMenu(c, MENU_PATH, a => this._onAction(a)));
             return new StatusNotifierItem({conn: c, id, title, label, menuPath: MENU_PATH, onActivate: () => {}});
         };
-        this._items = {session: item('breath-session', 'Breath · Sessão de 5h', '5h'),
-            weekly: item('breath-weekly', 'Breath · Semanal', 'sem')};
+        this._items = {};
+        for (const it of ITEMS)
+            this._items[it.kind] = item(it.id, it.title, it.label);
         this._timer = 0;
     }
 
