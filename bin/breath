@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Comando `breath` (veja linux/cli.js). Funciona também por link (~/.local/bin/breath).
+dir=$(dirname "$(readlink -f "$0")")
+exec gjs -m "$dir/../linux/cli.js" "$@"
