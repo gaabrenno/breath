@@ -49,8 +49,8 @@ main() {
     local gs in_gnome=0 gnome_ok=0 no_tray=0
     gs=$(gnome-shell --version 2>/dev/null || true)
     [[ ${XDG_CURRENT_DESKTOP:-} == *GNOME* ]] && in_gnome=1
-    # A extensão roda do GNOME 45 (extensões em módulos ES) ao 49.
-    [[ $gs =~ ^GNOME\ Shell\ 4[5-9](\.|$) ]] && gnome_ok=1
+    # A extensão roda do GNOME 45 (extensões em módulos ES) ao 50.
+    [[ $gs =~ ^GNOME\ Shell\ (4[5-9]|50)(\.|$) ]] && gnome_ok=1
     if [ -z "$mode" ]; then
         if [ $in_gnome = 1 ] && [ $gnome_ok = 1 ]; then
             mode=gnome
@@ -71,7 +71,7 @@ main() {
 
     if [ "$mode" = gnome ]; then
         [ $gnome_ok = 1 ] ||
-            die "a extensão do Breath requer GNOME Shell 45 a 49 (encontrado: ${gs:-nenhum}). Use --tray para os ícones na bandeja."
+            die "a extensão do Breath requer GNOME Shell 45 a 50 (encontrado: ${gs:-nenhum}). Use --tray para os ícones na bandeja."
     fi
     grep -q '"claudeAiOauth"' "$HOME/.claude/.credentials.json" 2>/dev/null ||
         die "não encontrei o login do Claude Code. Instale o Claude Code, rode 'claude' e use /login."

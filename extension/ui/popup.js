@@ -14,11 +14,21 @@ const LEVEL_PCT = {blue: 0, yellow: 75, red: 90};
 
 const cap = s => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
+// GNOME 48+ usa `orientation`; `vertical` ficou obsoleto e pode sumir. Antes do 48 só há `vertical`.
+function vertical(box) {
+    if ('orientation' in box)
+        box.orientation = Clutter.Orientation.VERTICAL;
+    else
+        box.vertical = true;
+    return box;
+}
+
 /** Painel de detalhes exibido ao passar o mouse sobre os anéis. */
 export const UsagePopup = GObject.registerClass(
 class UsagePopup extends St.BoxLayout {
     _init() {
-        super._init({style_class: 'breath-popup', vertical: true, reactive: false, visible: false});
+        super._init({style_class: 'breath-popup', reactive: false, visible: false});
+        vertical(this);
         this._title = new St.Label({style_class: 'breath-title'});
         this._warning = new St.Label({style_class: 'breath-warning', visible: false});
         this._warning.clutter_text.line_wrap = true;
@@ -28,7 +38,7 @@ class UsagePopup extends St.BoxLayout {
         this._secondary.clutter_text.line_wrap = true;
         this._secondary.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
         this._secondary.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-        this._rows = new St.BoxLayout({vertical: true});
+        this._rows = vertical(new St.BoxLayout());
         this._footer = new St.Label({style_class: 'breath-footer'});
         this.add_child(this._title);
         this.add_child(this._warning);
@@ -38,7 +48,7 @@ class UsagePopup extends St.BoxLayout {
     }
 
     _row(label, r, nowMs) {
-        const box = new St.BoxLayout({vertical: true, style_class: 'breath-row'});
+        const box = vertical(new St.BoxLayout({style_class: 'breath-row'}));
         const top = new St.BoxLayout();
         top.add_child(new St.Label({text: label, x_expand: true}));
         const pctText = r.pct === null ? '–' : `${r.source === 'estimate' ? '~' : ''}${Math.round(r.pct)}%`;
