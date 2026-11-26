@@ -1,5 +1,5 @@
 import {assertEq} from './assert.js';
-import {nextUpdateDelay, safely, ITEMS} from '../linux/tray.js';
+import {nextUpdateDelay, safely, ITEMS, registrationOrder} from '../linux/tray.js';
 
 export default {
     'primeira busca de atualização em 2 min': () => assertEq(nextUpdateDelay(0), 120),
@@ -15,6 +15,12 @@ export default {
         assertEq(ITEMS.map(i => i.kind), ['session', 'weekly']);
         const titles = ITEMS.map(i => i.title);
         assertEq([...titles].sort(), titles);
+    },
+    'no GNOME (AppIndicator insere no começo) registra a semana antes': () =>
+        assertEq(registrationOrder('gnome-shell'), ['weekly', 'session']),
+    'nos outros painéis registra a sessão antes': () => {
+        assertEq(registrationOrder('plasmashell'), ['session', 'weekly']);
+        assertEq(registrationOrder(null), ['session', 'weekly']);
     },
     'safely devolve o resultado': () => assertEq(safely('a', () => 7, () => {}), 7),
 };

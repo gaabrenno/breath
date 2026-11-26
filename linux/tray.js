@@ -23,6 +23,30 @@ export const ITEMS = [
     {kind: 'weekly', id: 'breath-weekly', title: 'Breath · semana', label: 'sem'},
 ];
 
+/**
+ * Ordem de registro dos ícones. A extensão AppIndicator do GNOME Shell insere
+ * cada ícone novo no começo; os outros painéis acrescentam no fim ou ordenam
+ * pelo título.
+ * @param {string|null} host nome do processo dono do StatusNotifierWatcher
+ */
+export function registrationOrder(host) {
+    return host === 'gnome-shell' ? ['weekly', 'session'] : ['session', 'weekly'];
+}
+
+/** Processo dono do StatusNotifierWatcher (ex.: gnome-shell, plasmashell), ou null. */
+function watcherHost(conn) {
+    try {
+        const r = conn.call_sync('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus',
+            'GetConnectionUnixProcessID', new GLib.Variant('(s)', ['org.kde.StatusNotifierWatcher']),
+            null, Gio.DBusCallFlags.NONE, 2000, null);
+        const [pid] = r.deepUnpack();
+        const [, bytes] = GLib.file_get_contents(`/proc/${pid}/comm`);
+        return new TextDecoder().decode(bytes).trim();
+    } catch {
+        return null;
+    }
+}
+
 /** Roda fn; um erro vira uma linha de log em vez de derrubar a bandeja. */
 export function safely(what, fn, log = m => printerr(m)) {
     try {
@@ -69,8 +93,9 @@ class Tray {
         const cached = this._cache.read(Date.now());
         if (cached)
             safely('mostrar a última leitura', () => this._render(cached.view));
-        this._items.session.register();
-        this._items.weekly.register();
+        // Um de cada vez, para a ordem na bandeja não depender de quem responde antes.
+        const [first, second] = registrationOrder(watcherHost(this._conn));
+        this._items[first].register(() => this._items[second].register());
         this._tick();
         this._watchVersion();
         if (readConfig(paths().configPath).updater === 'tray')

@@ -50,6 +50,7 @@ export class StatusNotifierItem {
      */
     constructor({conn, id, title, label = '', menuPath, onActivate}) {
         this._label = label;
+        this._shownLabel = ''; // ver _showLabelSoon
         this._conn = conn;
         this._id = id;
         this._title = title;
@@ -64,15 +65,37 @@ export class StatusNotifierItem {
         this._watchId = 0;
         this._retry = 0;
         this._attempt = 0;
+        this._labelTimer = 0;
     }
 
-    /** Pede o nome no barramento e se registra no watcher sempre que ele aparecer. */
-    register() {
+    /**
+     * A extensão AppIndicator do GNOME só desenha o rótulo quando ele muda.
+     * Registra com rótulo vazio e, depois que o painel leu o ícone, troca e avisa.
+     */
+    _showLabelSoon() {
+        if (!this._label || this._labelTimer)
+            return;
+        this._labelTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+            this._labelTimer = 0;
+            this._shownLabel = this._label;
+            this._impl.emit_signal('XAyatanaNewLabel',
+                new GLib.Variant('(ss)', [this._shownLabel, this.XAyatanaLabelGuide]));
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /**
+     * Pede o nome no barramento e se registra no watcher sempre que ele aparecer.
+     * @param {()=>void} [onFirstRegistered] chamado uma vez, no primeiro registro aceito
+     */
+    register(onFirstRegistered = () => {}) {
+        this._onFirst = onFirstRegistered;
         this._ownId = Gio.bus_own_name_on_connection(this._conn, this._busName, Gio.BusNameOwnerFlags.NONE,
             () => {
                 this._watchId = Gio.bus_watch_name_on_connection(this._conn, WATCHER,
                     Gio.BusNameWatcherFlags.NONE, () => {
                         this._attempt = 0;
+                        this._shownLabel = '';
                         this._registerWithWatcher();
                     }, () => this._cancelRetry());
             }, null);
@@ -84,6 +107,10 @@ export class StatusNotifierItem {
             (c, res) => {
                 try {
                     c.call_finish(res);
+                    this._showLabelSoon();
+                    const cb = this._onFirst;
+                    this._onFirst = null;
+                    cb?.();
                 } catch (e) {
                     // Ex.: no login, o nome do watcher aparece antes do objeto existir.
                     if (this._attempt === 0)
@@ -115,6 +142,8 @@ export class StatusNotifierItem {
 
     destroy() {
         this._cancelRetry();
+        if (this._labelTimer)
+            GLib.source_remove(this._labelTimer);
         if (this._watchId)
             Gio.bus_unwatch_name(this._watchId);
         if (this._ownId)
@@ -171,7 +200,7 @@ export class StatusNotifierItem {
     }
 
     get XAyatanaLabel() {
-        return this._label;
+        return this._shownLabel;
     }
 
     get XAyatanaLabelGuide() {
