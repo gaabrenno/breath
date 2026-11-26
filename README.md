@@ -44,7 +44,7 @@ O instalador descobre o seu ambiente e instala o que cabe nele:
 
 | Ambiente | O que você ganha |
 |---|---|
-| GNOME 45 a 49 | Os anéis na barra superior (extensão do GNOME) |
+| GNOME 45 a 50 | Os anéis na barra superior (extensão do GNOME) |
 | KDE Plasma, XFCE, Cinnamon, MATE, Budgie, GNOME mais antigo | Dois ícones na bandeja, um por anel |
 | Hyprland, Sway, i3 e afins | O comando `breath`, para a sua barra de status |
 
@@ -199,7 +199,7 @@ como ir parar em outro lugar. Tudo o que ele guarda fica em
 <summary><strong>Funciona na minha distro?</strong></summary>
 
 Funciona em qualquer Linux com sessão gráfica (veja [Onde funciona](#onde-funciona)).
-No GNOME 45 a 49 ele vira uma extensão; nos outros ambientes, ícones na bandeja.
+No GNOME 45 a 50 ele vira uma extensão; nos outros ambientes, ícones na bandeja.
 
 Fora do GNOME, o Breath precisa do `gjs`. Se faltar, o instalador avisa e
 mostra o comando:
