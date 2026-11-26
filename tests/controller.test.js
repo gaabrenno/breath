@@ -106,6 +106,29 @@ export default {
         await c2.refresh();
         assertEq(calls.notes.length, 1);
     },
+    'reloadState: não repete notificação já dada por outro processo': async () => {
+        const u = usageJson();
+        u.seven_day.utilization = 91;
+        const {c, calls, deps} = make({fetchUsage: async () => structuredClone(u), reloadState: true});
+        u.seven_day.utilization = 50;
+        await c.refresh(); // carrega o estado em memória, abaixo de 90%
+        // Outro processo (o comando breath) notifica e grava o estado.
+        u.seven_day.utilization = 91;
+        const other = new Controller({...deps, onNotify: () => {}});
+        await other.refresh();
+        await c.refresh();
+        assertEq(calls.notes, []);
+    },
+    'sem reloadState o estado em memória é mantido': async () => {
+        let loads = 0;
+        const store = new MemStore();
+        const orig = store.load.bind(store);
+        store.load = async () => (loads++, orig());
+        const {c} = make({store});
+        await c.refresh();
+        await c.refresh();
+        assertEq(loads, 1);
+    },
     'notificação não repete quando resets_at varia nos sub-segundos': async () => {
         let i = 0;
         const {c, calls} = make({fetchUsage: async () => {

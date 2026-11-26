@@ -72,6 +72,7 @@ export function createRuntime({onNotify}) {
         },
         onNotify,
         log: m => printerr(m),
+        reloadState: true, // bandeja e comando dividem o state.json
     });
     return {controller, lastView: () => last};
 }
