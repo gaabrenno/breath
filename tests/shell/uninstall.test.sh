@@ -50,3 +50,22 @@ test_devlink_refuses_real_dir() {
     bash "$REPO_ROOT/scripts/dev-link.sh" >/dev/null 2>&1 && fail "deveria recusar"
     [ -d "$(LINK)" ] && [ ! -L "$(LINK)" ] || fail "mexeu na pasta"
 }
+
+test_uninstall_tray() {
+    sandbox; make_remote v1.0.0
+    bash "$REPO_ROOT/install.sh" --tray >/dev/null 2>&1 || fail "install"
+    [ -f "$HOME/.config/autostart/breath.desktop" ] || fail "sem autostart antes"
+    : > "$SYSLOG"
+    bash "$REPO_ROOT/uninstall.sh" > "$HOME/out.txt" 2>&1 || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    [ ! -e "$HOME/.config/autostart/breath.desktop" ] || fail "autostart ficou"
+    [ ! -e "$HOME/.local/bin/breath" ] && [ ! -L "$HOME/.local/bin/breath" ] || fail "comando ficou"
+    [ ! -e "$HOME/.config/breath" ] || fail "config ficou"
+    assert_contains "$SYSLOG" "pkill"
+    assert_not_contains "$HOME/out.txt" "Encerre a sessão"
+}
+test_uninstall_keeps_foreign_bin() {
+    sandbox
+    mkdir -p "$HOME/.local/bin"; echo meu > "$HOME/.local/bin/breath"
+    bash "$REPO_ROOT/uninstall.sh" >/dev/null 2>&1
+    assert_eq "$(cat "$HOME/.local/bin/breath")" meu
+}

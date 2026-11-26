@@ -77,3 +77,28 @@ test_not_a_git_repo_touches_nothing() {
     assert_eq "$(cat "$HOME/.meu-dotfile")" novo
     [ -f "$HOME/nao-rastreado" ] || fail "git clean rodou no HOME"
 }
+
+set_mode() { mkdir -p "$HOME/.config/breath"; printf 'mode=%s\nupdater=systemd\n' "$1" > "$HOME/.config/breath/install.conf"; }
+
+test_update_message_tray() {
+    setup_update v1.0.0
+    set_mode tray
+    add_tag v1.1.0
+    run_update || fail "saída != 0"
+    assert_contains "$SYSLOG" "notify-send Breath atualizado para v1.1.0"
+    assert_not_contains "$SYSLOG" "próxima sessão"
+}
+test_update_message_gnome_conf() {
+    setup_update v1.0.0
+    set_mode gnome
+    add_tag v1.1.0
+    run_update
+    assert_contains "$SYSLOG" "vale na próxima sessão"
+}
+test_update_keeps_conf() {
+    setup_update v1.0.0
+    set_mode tray
+    add_tag v1.1.0
+    run_update
+    assert_contains "$HOME/.config/breath/install.conf" "mode=tray"
+}
