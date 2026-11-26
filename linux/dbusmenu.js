@@ -53,9 +53,23 @@ export function menuItems() {
     ];
 }
 
+/**
+ * Menu da bandeja no GNOME (AppIndicator): lá o clique simples sempre abre o menu,
+ * então ele tem um único item e a abertura dele abre o painel de detalhes.
+ * (Um item invisível não serve: o GNOME não abre menu sem item visível.)
+ */
+export function gnomeMenuItems() {
+    return [{id: 1, label: 'Abrindo os detalhes…', enabled: false, type: 'standard'}];
+}
+
+/** 'opened' / 'closed' quando o evento é do menu raiz (id 0); senão null. */
+export function rootEvent(id, eventId) {
+    return id === 0 && (eventId === 'opened' || eventId === 'closed') ? eventId : null;
+}
+
 function itemProps(it) {
     const p = {
-        'visible': GLib.Variant.new_boolean(true),
+        'visible': GLib.Variant.new_boolean(it.visible !== false),
         'enabled': GLib.Variant.new_boolean(it.enabled),
     };
     if (it.type === 'separator')
@@ -82,7 +96,9 @@ export class DBusMenu {
      * @param {string} path
      * @param {(action:string)=>void} onAction
      */
-    constructor(conn, path, onAction) {
+    /** onRoot('opened'|'closed'): o painel abriu ou fechou o menu. */
+    constructor(conn, path, onAction, onRoot = () => {}) {
+        this._onRoot = onRoot;
         this._items = [];
         this._revision = 1;
         this._onAction = onAction;
@@ -148,6 +164,9 @@ export class DBusMenu {
     }
 
     Event(id, eventId, _data, _ts) {
+        const root = rootEvent(id, eventId);
+        if (root)
+            this._onRoot(root);
         if (eventId !== 'clicked')
             return;
         const it = this._items.find(i => i.id === id);

@@ -28,6 +28,12 @@ window.breath { background: none; }
 .breath-pct { font-weight: bold; }
 .breath-reset { color: #aaaaaa; font-size: 9pt; }
 .breath-footer { color: #999999; font-size: 8.5pt; border-top: 1px solid #3a3a3a; padding-top: 8px; }
+.breath-actions { padding-top: 6px; }
+.breath-actions button {
+  background: #3a3a3a; color: #eeeeee; border: none; box-shadow: none;
+  border-radius: 8px; padding: 4px 10px; font-size: 9pt; min-height: 0;
+}
+.breath-actions button:hover { background: #474747; }
 `;
 
 const LEVEL_COLOR = {blue: '#3b8eea', yellow: '#f5c542', red: '#e5484d'};
@@ -77,7 +83,9 @@ function bar(fraction, color, dim) {
 }
 
 export class DetailsPopup {
-    constructor() {
+    /** @param {(action:'refresh'|'open')=>void} onAction botões do painel */
+    constructor(onAction = () => {}) {
+        this._onAction = onAction;
         if (!cssLoaded) {
             const provider = new Gtk.CssProvider();
             provider.load_from_string(CSS);
@@ -175,6 +183,14 @@ export class DetailsPopup {
             box.append(row);
         }
         box.append(label(m.footer, 'breath-footer'));
+        const actions = new Gtk.Box({spacing: 6, halign: Gtk.Align.END});
+        actions.add_css_class('breath-actions');
+        for (const [text, action] of [['Atualizar agora', 'refresh'], ['Abrir uso no claude.ai', 'open']]) {
+            const b = new Gtk.Button({label: text});
+            b.connect('clicked', () => this._onAction(action));
+            actions.append(b);
+        }
+        box.append(actions);
         this._win.set_child(box);
     }
 }

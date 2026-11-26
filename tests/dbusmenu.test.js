@@ -1,5 +1,5 @@
 import {assertEq} from './assert.js';
-import {menuItems, layoutVariant} from '../linux/dbusmenu.js';
+import {menuItems, layoutVariant, rootEvent, gnomeMenuItems} from '../linux/dbusmenu.js';
 
 export default {
     'menu enxuto: detalhes, separador e as duas ações': () => {
@@ -12,6 +12,15 @@ export default {
         ]);
         assertEq(items.every(i => i.enabled), true);
     },
+    'abertura e fechamento do menu raiz': () => {
+        assertEq(rootEvent(0, 'opened'), 'opened');
+        assertEq(rootEvent(0, 'closed'), 'closed');
+        assertEq(rootEvent(3, 'opened'), null);
+        assertEq(rootEvent(0, 'clicked'), null);
+    },
+    'menu do GNOME: um item visível e inativo': () =>
+        assertEq(gnomeMenuItems().map(i => [i.id, i.label, i.enabled, i.visible !== false]),
+            [[1, 'Abrindo os detalhes…', false, true]]),
     'layout com revisão e filhos': () => {
         const items = menuItems();
         const [rev, [rootId, props, children]] = layoutVariant(items, 7).deepUnpack();

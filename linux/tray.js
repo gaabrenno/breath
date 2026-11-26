@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import System from 'system';
 
 import {StatusNotifierItem} from './sni.js';
-import {DBusMenu, menuItems} from './dbusmenu.js';
+import {DBusMenu, menuItems, gnomeMenuItems} from './dbusmenu.js';
 import {ringPixmaps} from './icon.js';
 import {tooltipFor} from './text.js';
 import {ViewCache, ensureFresh} from './viewcache.js';
@@ -81,15 +81,17 @@ class Tray {
         this._menus = [];
         const item = (id, title, label) => {
             const c = privateConnection();
-            this._menus.push(new DBusMenu(c, MENU_PATH, a => this._onAction(a)));
+            this._menus.push(new DBusMenu(c, MENU_PATH, a => this._onAction(a), ev => this._onMenuRoot(ev)));
             return new StatusNotifierItem({conn: c, id, title, label, menuPath: MENU_PATH,
                 onActivate: (_x, _y, token) => this._togglePopup(token)});
         };
         this._items = {};
         for (const it of ITEMS)
             this._items[it.kind] = item(it.id, it.title, it.label);
-        for (const m of this._menus)
-            m.setItems(menuItems());
+        // No GNOME (AppIndicator), o clique simples sempre abre o menu: a abertura dele
+        // vira a abertura do painel (ver _onMenuRoot).
+        this._host = watcherHost(conn);
+        this._setMenus(this._host === 'gnome-shell' ? gnomeMenuItems() : menuItems());
         this._view = null;
         this._popup = undefined; // carregado no primeiro clique (GTK4 é opcional)
         this._timer = 0;
@@ -100,7 +102,7 @@ class Tray {
         if (cached)
             safely('mostrar a última leitura', () => this._render(cached.view));
         // Um de cada vez, para a ordem na bandeja não depender de quem responde antes.
-        const [first, second] = registrationOrder(watcherHost(this._conn));
+        const [first, second] = registrationOrder(this._host);
         this._items[first].register(() => this._items[second].register());
         this._tick();
         this._watchVersion();
@@ -142,11 +144,31 @@ class Tray {
         });
     }
 
+    _setMenus(items) {
+        for (const m of this._menus)
+            m.setItems(items);
+    }
+
+    /**
+     * GNOME: o menu abriu → abre o painel e esvazia o menu (o GNOME o esconde, mas
+     * segura o próximo clique). Quando o GNOME avisar que fechou, o item volta.
+     */
+    _onMenuRoot(ev) {
+        if (this._host !== 'gnome-shell')
+            return;
+        if (ev === 'opened') {
+            this._togglePopup();
+            this._setMenus([]);
+        } else {
+            this._setMenus(gnomeMenuItems());
+        }
+    }
+
     async _togglePopup(activationToken = null) {
         if (this._popup === undefined) {
             try {
                 const {DetailsPopup} = await import('./popup.js');
-                this._popup = new DetailsPopup();
+                this._popup = new DetailsPopup(a => this._onAction(a));
             } catch (e) {
                 this._popup = null;
                 printerr(`breath: painel de detalhes indisponível; instale o GTK4 (${e.message})`);
