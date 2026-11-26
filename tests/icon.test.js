@@ -1,5 +1,6 @@
 import {assert, assertEq} from './assert.js';
-import {rgbaToArgb, ringPixmaps} from '../linux/icon.js';
+import Gio from 'gi://Gio';
+import {rgbaToArgb, ringPixmaps, iconPath} from '../linux/icon.js';
 import {colorFor} from '../extension/lib/thresholds.js';
 
 const rd = (pct, source = 'official') => ({pct, resetsAt: null, source, ageMs: 0, deltaPct: 0});
@@ -28,6 +29,10 @@ export default {
                 Math.abs(big[i + 3] - b) <= 8;
         }
         assert(found, 'nenhum pixel com a cor do anel');
+    },
+    'PNG temporário é por processo': () => {
+        const pid = String(new Gio.Credentials().get_unix_pid());
+        assert(iconPath(22).includes(`-${pid}-`), iconPath(22));
     },
     'sem dados também desenha': () => assertEq(ringPixmaps(rd(null, 'none')).length, 3),
 };

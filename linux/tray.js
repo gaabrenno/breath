@@ -17,6 +17,16 @@ const MENU_PATH = '/MenuBar';
 const USAGE_PAGE = 'https://claude.ai/settings/usage';
 const RESTART_DELAY_SEC = 5;
 
+/** Roda fn; um erro vira uma linha de log em vez de derrubar a bandeja. */
+export function safely(what, fn, log = m => printerr(m)) {
+    try {
+        return fn();
+    } catch (e) {
+        log(`breath: erro ao ${what} (${e.message})`);
+        return undefined;
+    }
+}
+
 /** Segundos até a próxima busca de atualização feita pela bandeja. */
 export function nextUpdateDelay(runs) {
     return runs === 0 ? 120 : 3600;
@@ -51,7 +61,7 @@ class Tray {
     start() {
         const cached = this._cache.read(Date.now());
         if (cached)
-            this._render(cached.view);
+            safely('mostrar a última leitura', () => this._render(cached.view));
         this._items.session.register();
         this._items.weekly.register();
         this._tick();
@@ -77,7 +87,7 @@ class Tray {
         try {
             const view = await ensureFresh({cache: this._cache, refresh: () => refreshView(this._rt),
                 nowMs: Date.now(), force: true});
-            this._render(view);
+            safely('desenhar os ícones', () => this._render(view));
         } catch (e) {
             printerr(`breath: erro no ciclo (${e.name})`);
         }
@@ -147,8 +157,10 @@ function main() {
     Gio.bus_own_name_on_connection(conn, APP_NAME,
         Gio.BusNameOwnerFlags.ALLOW_REPLACEMENT | Gio.BusNameOwnerFlags.REPLACE,
         () => {
-            tray ??= new Tray(conn, repoDir);
-            tray.start();
+            safely('iniciar a bandeja', () => {
+                tray ??= new Tray(conn, repoDir);
+                tray.start();
+            });
         },
         () => loop.quit()); // outra bandeja tomou o nome (ou não conseguimos): encerra
     loop.run();

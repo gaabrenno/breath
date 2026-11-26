@@ -1,5 +1,6 @@
 // Desenha o anel da bandeja (mesmo desenho de extension/ui/ring.js, sem a legenda)
 // e devolve os pixels em ARGB32 big-endian, o formato do IconPixmap.
+import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GdkPixbuf from 'gi://GdkPixbuf?version=2.0';
 import Cairo from 'cairo';
@@ -72,11 +73,14 @@ function draw(cr, size, r) {
     cr.showText(text);
 }
 
-function tmpDir() {
+const PID = new Gio.Credentials().get_unix_pid();
+
+/** PNG temporário do ícone; um por processo, para duas bandejas não se atropelarem na troca de versão. */
+export function iconPath(size) {
     const base = GLib.getenv('XDG_RUNTIME_DIR') || GLib.get_tmp_dir();
     const dir = `${base}/breath`;
     GLib.mkdir_with_parents(dir, 0o700);
-    return dir;
+    return `${dir}/ring-${GLib.getenv('BREATH_ICON_TAG') ?? ''}${PID}-${size}.png`;
 }
 
 /**
@@ -84,7 +88,6 @@ function tmpDir() {
  * @returns {{width:number, height:number, bytes:Uint8Array}[]}
  */
 export function ringPixmaps(r) {
-    const dir = tmpDir();
     return SIZES.map(size => {
         const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, size, size);
         const cr = new Cairo.Context(surface);
@@ -94,7 +97,7 @@ export function ringPixmaps(r) {
             cr.$dispose();
         }
         // O cairo do gjs não expõe os pixels: passa por PNG e GdkPixbuf.
-        const path = `${dir}/ring-${GLib.getenv('BREATH_ICON_TAG') ?? ''}${size}.png`;
+        const path = iconPath(size);
         surface.writeToPNG(path);
         surface.finish();
         const pb = GdkPixbuf.Pixbuf.new_from_file(path);
