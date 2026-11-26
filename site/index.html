@@ -124,6 +124,16 @@ caption{text-align:left}
 .faq summary{font-weight:700;cursor:pointer}
 .faq p{color:var(--ink-soft);margin:10px 0 0}
 
+/* estrelas do repositório */
+.gh{display:inline-flex;align-items:center}
+.stars{display:inline-flex;align-items:center;gap:5px;margin-left:10px;padding-left:10px;border-left:1.5px solid currentColor;font-variant-numeric:tabular-nums;font-weight:700}
+.stars[hidden]{display:none}
+.stars::before{content:"";width:14px;height:14px;background:var(--yellow);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z'/%3E%3C/svg%3E") center/contain no-repeat}
+.gh .stars{border-left-color:var(--line)}
+.btn-primary .stars{border-left-color:rgba(13,23,43,.25)}
+.btn-primary .stars::before{background:#c99a12}
 /* novidades */
 .cur{margin:18px 0 0;color:var(--ink-soft)}
 .cur b{color:var(--ink)}
@@ -182,7 +192,7 @@ footer{padding:34px 0 50px;color:var(--ink-soft);font-size:.92rem;border-top:1.5
 <path d="M120 112 H192 C214 112 222 96 212 84 C204 75 190 80 192 92" fill="none" stroke="#cfe3fb" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M136 144 H200 C222 144 230 162 220 174 C212 183 198 178 200 166" fill="none" stroke="#f5c542" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
 </svg><span>Breath</span><span class="meter" aria-hidden="true"><b id="pct">0%</b> da página</span></a>
-    <a class="gh" href="https://github.com/gaabrenno/breath">GitHub</a>
+    <a class="gh" href="https://github.com/gaabrenno/breath">GitHub<span class="stars" data-estrelas hidden></span></a>
   </header>
 
   <main>
@@ -310,13 +320,14 @@ footer{padding:34px 0 50px;color:var(--ink-soft);font-size:.92rem;border-top:1.5
       <h2>Seu fôlego chegou a 100%</h2>
       <p>Antes do reset, que tal uma estrela no GitHub? O Breath é open source, e a estrela ajuda outras pessoas a encontrar o projeto.</p>
     </div>
-    <a class="btn btn-primary" href="https://github.com/gaabrenno/breath">Dar uma estrela no GitHub</a>
+    <a class="btn btn-primary" href="https://github.com/gaabrenno/breath">Dar uma estrela no GitHub<span class="stars" data-estrelas hidden></span></a>
   </section>
   </main>
 
   <footer>Breath é um projeto independente, sem ligação com a Anthropic. Feito com Claude Code.</footer>
 </div>
 <script type="module" src="novidades.js"></script>
+<script type="module" src="estrelas.js"></script>
 <script>
 // O logo do cabeçalho "consome" conforme a página rola: azul, amarelo a partir de 75%, vermelho a partir de 90%.
 (() => {
