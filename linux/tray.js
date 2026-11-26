@@ -11,6 +11,7 @@ import {tooltipFor} from './text.js';
 import {ViewCache, ensureFresh} from './viewcache.js';
 import {createRuntime, refreshView, paths, readConfig} from './runtime.js';
 import {notify} from './notifier.js';
+import {loadKwinPlacement} from './kwin.js';
 
 const APP_NAME = 'io.github.gaabrenno.Breath';
 const MENU_PATH = '/MenuBar';
@@ -103,6 +104,10 @@ class Tray {
         this._items[first].register(() => this._items[second].register());
         this._tick();
         this._watchVersion();
+        // No KDE, o painel de detalhes abre junto do cursor (o app não pode se posicionar no Wayland).
+        const runtimeDir = `${GLib.getenv('XDG_RUNTIME_DIR') || GLib.get_tmp_dir()}/breath`;
+        loadKwinPlacement(this._conn, new Gio.Credentials().get_unix_pid(), runtimeDir)
+            .catch(e => printerr(`breath: não consegui ajustar a posição do painel no KWin (${e.message})`));
         if (readConfig(paths().configPath).updater === 'tray')
             this._scheduleUpdate(0);
     }
