@@ -29,9 +29,10 @@ test_missing_git() {
 }
 test_wrong_gnome() {
     sandbox; make_remote v1.0.0
-    FAKE_GNOME=46 run_install && fail "deveria falhar"
-    assert_contains "$HOME/out.txt" "GNOME Shell 49"
-    assert_nothing_created
+    FAKE_GNOME=46 WAYLAND_DISPLAY=wayland-0 run_install || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    assert_contains "$(CONF)" "mode=tray"
+    assert_contains "$HOME/out.txt" "AppIndicator"
+    [ ! -e "$(LINK)" ] || fail "não deveria criar link da extensão"
 }
 test_no_credentials() {
     sandbox; make_remote v1.0.0
@@ -102,4 +103,107 @@ test_regular_file_at_link_refuses() {
     mkdir -p "$(dirname "$(LINK)")"; echo meu > "$(LINK)"
     run_install && fail "deveria recusar"
     assert_eq "$(cat "$(LINK)")" meu
+}
+
+CONF() { echo "$HOME/.config/breath/install.conf"; }
+AUTOSTART() { echo "$HOME/.config/autostart/breath.desktop"; }
+BIN() { echo "$HOME/.local/bin/breath"; }
+
+test_gnome_writes_conf() {
+    sandbox; make_remote v1.0.0
+    run_install || fail "saída != 0"
+    assert_contains "$(CONF)" "mode=gnome"
+    assert_contains "$(CONF)" "updater=systemd"
+    [ ! -e "$(AUTOSTART)" ] || fail "não deveria criar autostart"
+}
+test_mode_tray_kde() {
+    sandbox; make_remote v1.0.0
+    XDG_CURRENT_DESKTOP=KDE WAYLAND_DISPLAY=wayland-0 run_install || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    assert_contains "$(CONF)" "mode=tray"
+    assert_contains "$(CONF)" "updater=systemd"
+    assert_contains "$(AUTOSTART)" "Exec=gjs -m $BREATH_DIR/linux/tray.js"
+    assert_contains "$SYSLOG" "setsid"
+    assert_contains "$SYSLOG" "systemctl --user enable --now breath-update.timer"
+    assert_not_contains "$SYSLOG" "gnome-extensions enable"
+    [ ! -e "$(LINK)" ] || fail "não deveria criar link da extensão"
+    assert_contains "$HOME/out.txt" "bandeja"
+}
+test_mode_cli_headless() {
+    sandbox; make_remote v1.0.0
+    XDG_CURRENT_DESKTOP= run_install || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    assert_contains "$(CONF)" "mode=cli"
+    [ ! -e "$(AUTOSTART)" ] || fail "não deveria criar autostart"
+    assert_contains "$HOME/out.txt" "breath --waybar"
+}
+test_flag_cli() {
+    sandbox; make_remote v1.0.0
+    bash "$REPO_ROOT/install.sh" --cli > "$HOME/out.txt" 2>&1 || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    assert_contains "$(CONF)" "mode=cli"
+    [ ! -e "$(LINK)" ] || fail "não deveria criar link da extensão"
+}
+test_flag_via_stdin() {
+    sandbox; make_remote v1.0.0
+    bash -s -- --cli < "$REPO_ROOT/install.sh" > "$HOME/out.txt" 2>&1 || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    assert_contains "$(CONF)" "mode=cli"
+}
+test_bad_flag() {
+    sandbox; make_remote v1.0.0
+    bash "$REPO_ROOT/install.sh" --xyz > "$HOME/out.txt" 2>&1 && fail "deveria falhar"
+    assert_contains "$HOME/out.txt" "--xyz"
+    assert_nothing_created
+}
+test_missing_gjs() {
+    sandbox; make_remote v1.0.0
+    XDG_CURRENT_DESKTOP=KDE WAYLAND_DISPLAY=wayland-0 FAKE_GJS_FAIL=1 run_install && fail "deveria falhar"
+    assert_contains "$HOME/out.txt" "sudo apt install gjs"
+    assert_contains "$HOME/out.txt" "pacman"
+    assert_nothing_created
+    [ ! -e "$(CONF)" ] || fail "não deveria gravar install.conf"
+}
+test_cli_link() {
+    sandbox; make_remote v1.0.0
+    run_install || fail "saída != 0"
+    assert_eq "$(readlink "$(BIN)")" "$BREATH_DIR/bin/breath"
+}
+test_cli_link_foreign() {
+    sandbox; make_remote v1.0.0
+    mkdir -p "$(dirname "$(BIN)")"; echo meu > "$(BIN)"
+    run_install || fail "saída != 0"
+    assert_eq "$(cat "$(BIN)")" meu
+    assert_contains "$HOME/out.txt" "já existe"
+}
+test_path_warning() {
+    sandbox; make_remote v1.0.0
+    run_install || fail "saída != 0"
+    assert_contains "$HOME/out.txt" "PATH"
+}
+test_switch_gnome_to_tray() {
+    sandbox; make_remote v1.0.0
+    run_install || fail "1ª execução"
+    [ -L "$(LINK)" ] || fail "sem link da extensão na 1ª"
+    bash "$REPO_ROOT/install.sh" --tray > "$HOME/out.txt" 2>&1 || { cat "$HOME/out.txt"; fail "2ª execução"; }
+    [ ! -e "$(LINK)" ] && [ ! -L "$(LINK)" ] || fail "link da extensão ficou"
+    [ -f "$(AUTOSTART)" ] || fail "sem autostart"
+    assert_contains "$(CONF)" "mode=tray"
+    assert_contains "$SYSLOG" "gnome-extensions disable breath@simer"
+}
+test_switch_tray_to_gnome() {
+    sandbox; make_remote v1.0.0
+    bash "$REPO_ROOT/install.sh" --tray > "$HOME/out.txt" 2>&1 || fail "1ª execução"
+    run_install || fail "2ª execução"
+    [ ! -e "$(AUTOSTART)" ] || fail "autostart ficou"
+    assert_contains "$SYSLOG" "pkill"
+    assert_contains "$(CONF)" "mode=gnome"
+}
+test_no_systemd_tray() {
+    sandbox; make_remote v1.0.0
+    XDG_CURRENT_DESKTOP=KDE WAYLAND_DISPLAY=wayland-0 FAKE_NO_SYSTEMD=1 run_install || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    assert_contains "$(CONF)" "updater=tray"
+    assert_not_contains "$SYSLOG" "enable --now"
+}
+test_no_systemd_cli() {
+    sandbox; make_remote v1.0.0
+    FAKE_NO_SYSTEMD=1 bash "$REPO_ROOT/install.sh" --cli > "$HOME/out.txt" 2>&1 || fail "saída != 0"
+    assert_contains "$(CONF)" "updater=none"
+    assert_contains "$HOME/out.txt" "atualizações automáticas"
 }
