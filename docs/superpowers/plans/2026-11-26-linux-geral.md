@@ -61,7 +61,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 1: Textos (`linux/text.js`)
+### Task 1: Textos (`linux/text.js`)
 
 **Files:**
 - Create: `linux/text.js`
@@ -95,7 +95,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 2: Cache da leitura e trava (`linux/viewcache.js`)
+### Task 2: Cache da leitura e trava (`linux/viewcache.js`)
 
 **Files:**
 - Create: `linux/viewcache.js`
@@ -132,7 +132,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 3: Montagem fora do Shell e notificação (`linux/runtime.js`, `linux/notifier.js`)
+### Task 3: Montagem fora do Shell e notificação (`linux/runtime.js`, `linux/notifier.js`)
 
 **Files:**
 - Create: `linux/runtime.js`, `linux/notifier.js`
@@ -155,7 +155,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 4: Comando `breath` (`linux/cli.js`, `bin/breath`)
+### Task 4: Comando `breath` (`linux/cli.js`, `bin/breath`)
 
 **Files:**
 - Create: `linux/cli.js`, `bin/breath` (executável)
@@ -183,7 +183,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 5: Ícone (`linux/icon.js`)
+### Task 5: Ícone (`linux/icon.js`)
 
 **Files:**
 - Create: `linux/icon.js`
@@ -207,7 +207,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 6: Menu D-Bus (`linux/dbusmenu.js`)
+### Task 6: Menu D-Bus (`linux/dbusmenu.js`)
 
 **Files:**
 - Create: `linux/dbusmenu.js`
@@ -231,7 +231,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 7: Item da bandeja e app (`linux/sni.js`, `linux/tray.js`)
+### Task 7: Item da bandeja e app (`linux/sni.js`, `linux/tray.js`)
 
 **Files:**
 - Create: `linux/sni.js`, `linux/tray.js`
@@ -263,7 +263,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 8: Instalador com modos (`install.sh`)
+### Task 8: Instalador com modos (`install.sh`)
 
 **Files:**
 - Modify: `install.sh`
@@ -302,7 +302,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 9: Atualizador e desinstalador
+### Task 9: Atualizador e desinstalador
 
 **Files:**
 - Modify: `scripts/update.sh`, `uninstall.sh`
@@ -324,7 +324,7 @@ Tipos usados em todo o plano (já existem no núcleo):
 
 ---
 
-### Tarefa 10: README e verificação final
+### Task 10: README e verificação final
 
 **Files:**
 - Modify: `README.md`
