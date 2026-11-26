@@ -7,7 +7,8 @@ import Cairo from 'cairo';
 import {colorFor} from '../extension/lib/thresholds.js';
 
 const SIZES = [22, 32, 44];
-const BASE = 22, LINE = 2.6;
+// Anel fino e número grande: os painéis desenham o ícone com 16 a 22 px.
+const BASE = 22, LINE = 2;
 
 function rgba(hex, alpha = 1) {
     const v = parseInt(hex.slice(1), 16);
@@ -34,7 +35,7 @@ export function rgbaToArgb(pixels, width, height, rowstride, hasAlpha) {
 function draw(cr, size, r) {
     const s = size / BASE;
     const line = LINE * s;
-    const c = size / 2, rad = size / 2 - line / 2 - 0.5 * s;
+    const c = size / 2, rad = size / 2 - line / 2;
     const {pct, source} = r;
     const hasData = source !== 'none' && pct !== null && pct !== undefined;
     const approx = source === 'stale' || source === 'estimate';
@@ -56,20 +57,17 @@ function draw(cr, size, r) {
         cr.setDash([], 0);
     }
 
-    const text = hasData ? `${source === 'estimate' ? '~' : ''}${Math.round(pct)}` : '–';
+    // O número vai sobre um disco escuro: legível em painel claro ou escuro.
+    // A estimativa já aparece no tracejado; o "~" fica no menu e no tooltip.
+    const text = hasData ? `${Math.round(pct)}` : '–';
+    cr.setSourceRGBA(0.12, 0.12, 0.12, 0.85);
+    cr.arc(c, c, rad - line / 2, 0, 2 * Math.PI);
+    cr.fill();
     cr.selectFontFace('Sans', Cairo.FontSlant.NORMAL, Cairo.FontWeight.BOLD);
-    cr.setFontSize((text.length >= 3 ? 6.5 : 8.5) * s);
+    cr.setFontSize((text.length >= 3 ? 8.5 : 11.5) * s);
     const ext = cr.textExtents(text);
-    const x = c - ext.width / 2 - ext.xBearing, y = c - ext.height / 2 - ext.yBearing;
-    // Branco com contorno escuro (o cairo do gjs não tem textPath: halo em 8 direções).
-    const d = 0.7 * s;
-    cr.setSourceRGBA(0, 0, 0, 0.55);
-    for (const [dx, dy] of [[-d, 0], [d, 0], [0, -d], [0, d], [-d, -d], [d, d], [-d, d], [d, -d]]) {
-        cr.moveTo(x + dx, y + dy);
-        cr.showText(text);
-    }
     cr.setSourceRGBA(1, 1, 1, hasData ? 1 : 0.8);
-    cr.moveTo(x, y);
+    cr.moveTo(c - ext.width / 2 - ext.xBearing, c - ext.height / 2 - ext.yBearing);
     cr.showText(text);
 }
 

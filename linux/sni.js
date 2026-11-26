@@ -21,6 +21,8 @@ const IFACE = `<node>
   <property name="ToolTip" type="(sa(iiay)ss)" access="read"/>
   <property name="ItemIsMenu" type="b" access="read"/>
   <property name="Menu" type="o" access="read"/>
+  <property name="XAyatanaLabel" type="s" access="read"/>
+  <property name="XAyatanaLabelGuide" type="s" access="read"/>
   <method name="ContextMenu"><arg type="i" direction="in"/><arg type="i" direction="in"/></method>
   <method name="Activate"><arg type="i" direction="in"/><arg type="i" direction="in"/></method>
   <method name="SecondaryActivate"><arg type="i" direction="in"/><arg type="i" direction="in"/></method>
@@ -29,6 +31,7 @@ const IFACE = `<node>
   <signal name="NewIcon"/>
   <signal name="NewToolTip"/>
   <signal name="NewStatus"><arg type="s"/></signal>
+  <signal name="XAyatanaNewLabel"><arg type="s"/><arg type="s"/></signal>
 </interface>
 </node>`;
 
@@ -36,9 +39,12 @@ let counter = 0;
 
 export class StatusNotifierItem {
     /**
-     * @param {{conn:Gio.DBusConnection, id:string, title:string, menuPath:string, onActivate:()=>void}} o
+     * label: texto curto ao lado do ícone, nos painéis que aceitam (ex.: AppIndicator do GNOME).
+     * @param {{conn:Gio.DBusConnection, id:string, title:string, label:string, menuPath:string,
+     *          onActivate:()=>void}} o
      */
-    constructor({conn, id, title, menuPath, onActivate}) {
+    constructor({conn, id, title, label = '', menuPath, onActivate}) {
+        this._label = label;
         this._conn = conn;
         this._id = id;
         this._title = title;
@@ -136,6 +142,14 @@ export class StatusNotifierItem {
 
     get ToolTip() {
         return new GLib.Variant('(sa(iiay)ss)', ['', [], this._tooltip.title, this._tooltip.body]);
+    }
+
+    get XAyatanaLabel() {
+        return this._label;
+    }
+
+    get XAyatanaLabelGuide() {
+        return 'sem';
     }
 
     get ItemIsMenu() {

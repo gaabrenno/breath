@@ -48,13 +48,13 @@ class Tray {
         // Cada ícone tem a sua conexão: os dois usam o caminho /StatusNotifierItem
         // e o menu precisa estar no mesmo serviço que o ícone.
         this._menus = [];
-        const item = (id, title) => {
+        const item = (id, title, label) => {
             const c = privateConnection();
             this._menus.push(new DBusMenu(c, MENU_PATH, a => this._onAction(a)));
-            return new StatusNotifierItem({conn: c, id, title, menuPath: MENU_PATH, onActivate: () => {}});
+            return new StatusNotifierItem({conn: c, id, title, label, menuPath: MENU_PATH, onActivate: () => {}});
         };
-        this._items = {session: item('breath-session', 'Breath · Sessão de 5h'),
-            weekly: item('breath-weekly', 'Breath · Semanal')};
+        this._items = {session: item('breath-session', 'Breath · Sessão de 5h', '5h'),
+            weekly: item('breath-weekly', 'Breath · Semanal', 'sem')};
         this._timer = 0;
     }
 
