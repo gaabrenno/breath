@@ -1,7 +1,6 @@
 // Menu da bandeja pelo protocolo com.canonical.dbusmenu (versão 3).
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import {detailLines} from './text.js';
 
 const IFACE = `<node>
 <interface name="com.canonical.dbusmenu">
@@ -42,24 +41,16 @@ const IFACE = `<node>
 </node>`;
 
 /**
- * Itens do menu: detalhes (desativados), separador e as duas ações.
+ * Menu enxuto: os detalhes ficam no painel próprio. Ids fixos.
  * @returns {{id:number, label:string, enabled:boolean, type:'standard'|'separator', action?:string}[]}
  */
-export function menuItems(view, nowMs) {
-    const d = detailLines(view, nowMs);
-    const info = [d.title];
-    if (d.warning)
-        info.push(`⚠ ${d.warning}`);
-    if (d.secondary)
-        info.push(`• ${d.secondary}`);
-    for (const r of d.rows)
-        info.push(`${r.short}: ${r.pct} · ${r.reset}`);
-    info.push(d.footer);
-    const items = info.map(label => ({label, enabled: false, type: 'standard'}));
-    items.push({label: '', enabled: true, type: 'separator'});
-    items.push({label: 'Atualizar agora', enabled: true, type: 'standard', action: 'refresh'});
-    items.push({label: 'Abrir uso no claude.ai', enabled: true, type: 'standard', action: 'open'});
-    return items.map((it, k) => ({id: k + 1, ...it}));
+export function menuItems() {
+    return [
+        {id: 1, label: 'Ver detalhes', enabled: true, type: 'standard', action: 'details'},
+        {id: 2, label: '', enabled: true, type: 'separator'},
+        {id: 3, label: 'Atualizar agora', enabled: true, type: 'standard', action: 'refresh'},
+        {id: 4, label: 'Abrir uso no claude.ai', enabled: true, type: 'standard', action: 'open'},
+    ];
 }
 
 function itemProps(it) {

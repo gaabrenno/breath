@@ -2,6 +2,7 @@
 // Puro: sem gi://, para ser testado e reaproveitado.
 import {formatReset, formatAge} from '../extension/lib/format.js';
 import {paceWarning} from '../extension/lib/pace.js';
+import {colorFor} from '../extension/lib/thresholds.js';
 
 const WARN = 75, CRIT = 90;
 
@@ -97,10 +98,40 @@ export function waybarJson(view, nowMs) {
     });
 }
 
-/** @param {'session'|'weekly'} kind */
-export function tooltipFor(kind, view, nowMs) {
+/**
+ * Tooltip curto: os detalhes ficam no painel que abre no clique.
+ * @param {'session'|'weekly'} kind
+ */
+export function tooltipFor(kind, view, _nowMs) {
     const title = kind === 'session'
         ? `Sessão de 5h: ${pctLabel(view.session)}`
         : `Semanal: ${pctLabel(view.weekly)}`;
-    return {title, body: body(detailLines(view, nowMs))};
+    return {title,
+        body: `Sessão ${pctLabel(view.session)} · Semanal ${pctLabel(view.weekly)}\nClique para ver os detalhes`};
+}
+
+/**
+ * O que o painel de detalhes mostra (mesmo conteúdo do painel da extensão).
+ * @returns {{title:string, warning:{level:string, title:string|null, text:string}|null,
+ *   secondary:{level:string, text:string}|null,
+ *   rows:{label:string, pct:string, fraction:number, color:string, dim:boolean, reset:string}[],
+ *   footer:string}}
+ */
+export function popupModel(view, nowMs) {
+    const d = detailLines(view, nowMs);
+    const pace = paceWarning(view, nowMs);
+    const readings = [view.session, view.weekly, view.weeklyOpus, view.weeklySonnet].filter(Boolean);
+    return {
+        title: d.title,
+        warning: pace ? {level: pace.level, title: pace.title ?? null, text: pace.text} : null,
+        secondary: pace?.secondary ? {level: pace.secondary.level, text: pace.secondary.text} : null,
+        rows: d.rows.map((row, k) => {
+            const r = readings[k];
+            return {label: row.label, pct: row.pct, reset: row.reset,
+                fraction: hasData(r) ? Math.min(1, Math.max(0, r.pct / 100)) : 0,
+                color: colorFor(hasData(r) ? r.pct : null),
+                dim: r.source !== 'official'};
+        }),
+        footer: d.footer,
+    };
 }

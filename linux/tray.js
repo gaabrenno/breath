@@ -81,11 +81,16 @@ class Tray {
         const item = (id, title, label) => {
             const c = privateConnection();
             this._menus.push(new DBusMenu(c, MENU_PATH, a => this._onAction(a)));
-            return new StatusNotifierItem({conn: c, id, title, label, menuPath: MENU_PATH, onActivate: () => {}});
+            return new StatusNotifierItem({conn: c, id, title, label, menuPath: MENU_PATH,
+                onActivate: (_x, _y, token) => this._togglePopup(token)});
         };
         this._items = {};
         for (const it of ITEMS)
             this._items[it.kind] = item(it.id, it.title, it.label);
+        for (const m of this._menus)
+            m.setItems(menuItems());
+        this._view = null;
+        this._popup = undefined; // carregado no primeiro clique (GTK4 é opcional)
         this._timer = 0;
     }
 
@@ -106,9 +111,9 @@ class Tray {
         const now = Date.now();
         for (const kind of ['session', 'weekly'])
             this._items[kind].update({pixmaps: ringPixmaps(view[kind]), tooltip: tooltipFor(kind, view, now)});
-        const items = menuItems(view, now);
-        for (const m of this._menus)
-            m.setItems(items);
+        this._view = view;
+        if (this._popup?.visible)
+            this._popup.update(view);
     }
 
     async _tick() {
@@ -132,8 +137,24 @@ class Tray {
         });
     }
 
+    async _togglePopup(activationToken = null) {
+        if (this._popup === undefined) {
+            try {
+                const {DetailsPopup} = await import('./popup.js');
+                this._popup = new DetailsPopup();
+            } catch (e) {
+                this._popup = null;
+                printerr(`breath: painel de detalhes indisponível; instale o GTK4 (${e.message})`);
+            }
+        }
+        if (this._popup && this._view)
+            safely('abrir os detalhes', () => this._popup.toggle(this._view, activationToken));
+    }
+
     _onAction(action) {
-        if (action === 'refresh') {
+        if (action === 'details') {
+            this._togglePopup();
+        } else if (action === 'refresh') {
             this._tick();
         } else if (action === 'open') {
             try {

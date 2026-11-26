@@ -27,6 +27,7 @@ const IFACE = `<node>
   <method name="Activate"><arg type="i" direction="in"/><arg type="i" direction="in"/></method>
   <method name="SecondaryActivate"><arg type="i" direction="in"/><arg type="i" direction="in"/></method>
   <method name="Scroll"><arg type="i" direction="in"/><arg type="s" direction="in"/></method>
+  <method name="ProvideXdgActivationToken"><arg type="s" direction="in"/></method>
   <signal name="NewTitle"/>
   <signal name="NewIcon"/>
   <signal name="NewToolTip"/>
@@ -45,8 +46,9 @@ export function retryDelay(attempt) {
 export class StatusNotifierItem {
     /**
      * label: texto curto ao lado do ícone, nos painéis que aceitam (ex.: AppIndicator do GNOME).
+     * onActivate(x, y): clique esquerdo (o menu fica no clique direito).
      * @param {{conn:Gio.DBusConnection, id:string, title:string, label:string, menuPath:string,
-     *          onActivate:()=>void}} o
+     *          onActivate:(x:number, y:number, token:string|null)=>void}} o
      */
     constructor({conn, id, title, label = '', menuPath, onActivate}) {
         this._label = label;
@@ -208,7 +210,7 @@ export class StatusNotifierItem {
     }
 
     get ItemIsMenu() {
-        return true;
+        return false; // clique esquerdo chama Activate (painel de detalhes)
     }
 
     get Menu() {
@@ -217,8 +219,15 @@ export class StatusNotifierItem {
 
     ContextMenu(_x, _y) {}
 
-    Activate(_x, _y) {
-        this._onActivate();
+    Activate(x, y) {
+        const token = this._activationToken;
+        this._activationToken = null;
+        this._onActivate(x, y, token);
+    }
+
+    /** O painel (ex.: KDE) manda um token antes do Activate, para a janela poder pegar o foco. */
+    ProvideXdgActivationToken(token) {
+        this._activationToken = token;
     }
 
     SecondaryActivate(_x, _y) {}
