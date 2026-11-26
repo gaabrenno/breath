@@ -87,9 +87,10 @@ no claude.ai.
 
 Fora do GNOME, o Breath aparece como dois ícones na bandeja: a sessão de 5h e
 a semana, cada um com a % no centro e as mesmas cores. **Clique** em um deles
-para abrir o painel de detalhes, no mesmo visual da extensão (ritmo, barras e
-horários de reset). O clique direito abre o menu com **Atualizar agora** e
-**Abrir uso no claude.ai**. O painel usa o GTK4, que quase toda distro já traz.
+para abrir o painel de detalhes, no mesmo visual da extensão (ritmo, barras,
+horários de reset e os botões **Atualizar agora** e **Abrir uso no claude.ai**).
+No KDE, o painel abre junto do mouse. O clique direito abre um menu com as
+mesmas ações. O painel usa o GTK4, que quase toda distro já traz.
 
 ### Comando `breath`
 
@@ -211,8 +212,9 @@ mostra o comando:
 | openSUSE | `sudo zypper install gjs` |
 
 Em GNOME anterior ao 45, os ícones da bandeja precisam da extensão
-"AppIndicator and KStatusNotifierItem Support" (o Ubuntu já traz); lá, o clique
-abre o menu, e o painel fica em **Ver detalhes**. A bandeja
+"AppIndicator and KStatusNotifierItem Support" (o Ubuntu já traz). Lá, o clique
+também abre o painel, mas ele aparece onde o GNOME decidir, e o primeiro clique
+depois de abrir só fecha um menu invisível da AppIndicator. A bandeja
 antiga do X11 (a do i3bar, por exemplo) não é suportada: nesse caso, use o
 comando `breath`.
 

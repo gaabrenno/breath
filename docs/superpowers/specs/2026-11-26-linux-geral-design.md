@@ -1,6 +1,6 @@
 # Breath — Linux em geral (bandeja + comando `breath`) — Design
 
-Data: 2026-11-26 · Status: aguardando aprovação
+Data: 2026-11-26 · Status: aprovado e implementado (veja "Mudanças durante a implementação")
 
 ## Intenção
 
@@ -280,3 +280,34 @@ autostart, o link `~/.local/bin/breath` (só se for nosso link) e
 - **Tooltip**: cada ambiente mostra de um jeito. O menu tem os mesmos detalhes,
   então nada se perde.
 - **Endpoint de uso não documentado**: igual a hoje.
+
+## Mudanças durante a implementação
+
+Decididas com o dono do projeto depois dos testes visuais (KDE Plasma 6 e
+GNOME 49 aninhados):
+
+- **Ícone:** anel fino, número grande sobre um disco escuro (legível em painel
+  claro e escuro, a partir de 16 px), sem o `~` (a estimativa fica no
+  tracejado). Rótulo "5h"/"sem" ao lado do ícone onde o painel aceita
+  (`XAyatanaLabel`, ex.: AppIndicator do GNOME).
+- **Detalhes:** o tooltip e o menu da bandeja são desenhados pelo painel do
+  ambiente, em texto puro. Os detalhes passaram para um **painel próprio em
+  GTK4**, no visual do painel da extensão, que abre no clique esquerdo (com os
+  botões Atualizar agora e Abrir uso no claude.ai). O tooltip virou um resumo e
+  o menu (clique direito) ficou só com as ações. Sem GTK4, a bandeja segue sem
+  o painel.
+- **Posição do painel:** no Wayland o app não pode posicionar a própria janela.
+  No KDE, a bandeja carrega no KWin (pelo D-Bus) um script que põe o painel
+  junto do cursor, sempre por cima e fora da barra de tarefas. Nos outros
+  ambientes, o compositor decide.
+- **GNOME:** a extensão passa a valer do **GNOME 45 ao 49** (só APIs estáveis
+  desde o 45); a bandeja fica para os outros ambientes e GNOME mais antigo. Lá,
+  a AppIndicator sempre abre o menu no clique simples: o menu tem um único item
+  e a abertura dele abre o painel; dois menus por ícone, trocados a cada
+  fechamento, porque a AppIndicator adia atualizações de menu fechado.
+- **Ordem dos ícones:** o KDE ordena pelo título e a AppIndicator insere no
+  começo; os títulos e a ordem de registro garantem sessão antes da semana.
+- **Robustez:** registro na bandeja com novas tentativas (no login o nome do
+  watcher pode existir antes do objeto); bandeja e comando releem o
+  `state.json` a cada consulta; sem bandeja compatível (ex.: i3), o instalador
+  cai no modo `cli`.
