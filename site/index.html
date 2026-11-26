@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breath · Seus limites do Claude na barra do Linux</title>
+<meta name="description" content="O Breath mostra na barra do Linux quanto você já usou do Claude na sessão de 5 horas e na semana, e avisa antes de acabar.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://gaabrenno.github.io/breath/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Breath: seus limites do Claude na barra do Linux">
+<meta property="og:description" content="Sessão de 5 horas e semana sempre à vista, com aviso antes de acabar. Open source, instala com um comando.">
+<meta property="og:url" content="https://gaabrenno.github.io/breath/">
+<meta name="theme-color" content="#0d172b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500&family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --air:#0d172b; --paper:#142139; --ink:#e9eef8; --ink-soft:#a3b1cc; --line:#23345a; --night:#0d172b; --deep:#091122;
+  --blue:#3b8eea; --yellow:#f5c542; --red:#e5484d; --panel:#2b2b2b; --bar:#161618;
+  --sans:"Atkinson Hyperlegible Next",system-ui,sans-serif;
+  --mono:"Atkinson Hyperlegible Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--air);color:var(--ink);font:400 1.0625rem/1.6 var(--sans)}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+
+/* topo */
+.top{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:14px 28px;margin:0 -28px;background:rgba(13,23,43,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1.5px solid transparent;transition:border-color .2s}
+.top.scrolled{border-bottom-color:var(--line)}
+.brand .mark{width:40px;height:40px;flex:none}
+.live-arc{stroke:var(--level,#3b8eea);stroke-dasharray:var(--deg,24) 360;transition:stroke .3s}
+.meter{font-size:.85rem;font-weight:500;color:var(--ink-soft);margin-left:6px;font-variant-numeric:tabular-nums}
+.meter b{color:var(--level,#3b8eea);font-weight:800;display:inline-block;min-width:3.2ch;text-align:right}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem;text-decoration:none;letter-spacing:-.01em}
+/* logo em destaque */
+.mast{display:flex;align-items:center;gap:22px;margin:0 0 34px}
+.mast .big{width:132px;height:132px;flex:none;filter:drop-shadow(0 24px 40px rgba(0,0,0,.45))}
+.mast .word{font-weight:800;font-size:clamp(2.6rem,5vw,3.6rem);letter-spacing:-.03em;line-height:1}
+.mast .word small{display:block;font-size:1rem;font-weight:500;letter-spacing:0;color:var(--ink-soft);margin-top:8px}
+.gh{font-weight:500;text-decoration:none;padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);background:transparent}
+.gh:hover{border-color:var(--ink)}
+
+/* hero */
+.hero{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:56px;align-items:center;padding:36px 0 80px}
+.hero h1{font-weight:800;font-size:clamp(2rem,3.8vw,3rem);line-height:1.04;letter-spacing:-.025em;margin:0 0 22px;max-width:15ch}
+.hero .lede{font-size:1.25rem;color:var(--ink-soft);max-width:34ch;margin:0 0 30px}
+.hero .lede strong{color:var(--ink);font-weight:700}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;font:700 1rem var(--sans);padding:13px 20px;border-radius:12px;text-decoration:none;cursor:pointer;border:0}
+.btn-primary{background:var(--ink);color:var(--night)}
+.btn-primary:hover{background:#fff}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-ghost:hover{box-shadow:inset 0 0 0 1.5px var(--ink)}
+
+/* brisa */
+.breeze{position:absolute;inset:-40px -28vw -20px -28vw;z-index:-1;pointer-events:none;overflow:visible}
+.breeze path{fill:none;stroke:#cfe0ff;stroke-linecap:round;stroke-width:2;stroke-dasharray:var(--dash) 2000;animation:blow var(--t) linear infinite;animation-delay:var(--d);opacity:0}
+@keyframes blow{0%{stroke-dashoffset:var(--dash);opacity:0}12%{opacity:var(--o)}80%{opacity:var(--o)}100%{stroke-dashoffset:-1500;opacity:0}}
+/* a cena do produto */
+.scene{position:relative;justify-self:end;width:100%;max-width:600px}
+.bar{position:relative;background:var(--bar);border:1px solid #2c3550;border-radius:20px 20px 12px 12px;height:80px;display:flex;align-items:center;gap:18px;padding:0 22px;color:#fff;box-shadow:0 34px 70px -30px rgba(0,0,0,.7)}
+.bar .clock{position:absolute;left:50%;transform:translateX(-50%)}
+.bar .sys{margin-left:auto;display:flex;gap:9px}.bar .sys i{width:14px;height:14px;border-radius:4px;background:#fff;opacity:.85}
+.bar .pill{width:42px;height:12px;border-radius:6px;background:#fff;opacity:.9}
+.bar .clock{font-weight:700;font-size:.95rem;opacity:.95}
+.rings{display:flex;gap:10px;background:rgba(255,255,255,.1);border-radius:14px;padding:5px 10px}
+.ring{display:grid;justify-items:center;line-height:1}
+.ring svg{width:54px;height:54px;display:block}
+.ring .track{stroke:rgba(255,255,255,.22)}
+.ring .arc{stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;stroke-dasharray:var(--len) var(--len);stroke-dashoffset:calc(var(--len) * (1 - var(--p) / 100));animation:fill 1.4s cubic-bezier(.2,.7,.2,1) .35s both}
+.ring text{font:700 14px var(--sans);fill:#fff}
+.ring small{font-size:.74rem;opacity:.75;margin-top:2px}
+@keyframes fill{from{stroke-dashoffset:var(--len)}}
+.popup{margin:16px 0 0 34px;width:min(100% - 34px,410px);background:var(--panel);color:#eee;border-radius:18px;padding:18px 20px;border:1px solid #3a3f4c;box-shadow:0 34px 70px -28px rgba(0,0,0,.75);font-size:.9rem;line-height:1.45}
+.popup b.t{display:block;color:#fff;font-size:.9rem;margin-bottom:10px}
+.warn{background:rgba(245,197,66,.14);color:#f3e3b0;border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.row{margin-bottom:12px}
+.row .h{display:flex;justify-content:space-between;font-size:.86rem}
+.row .h strong{color:#fff}
+.track-bar{height:6px;border-radius:3px;background:#444;margin:6px 0 4px;overflow:hidden}
+.track-bar i{display:block;height:100%;border-radius:3px;width:var(--p);animation:grow 1.4s cubic-bezier(.2,.7,.2,1) .35s both}
+@keyframes grow{from{width:0}}
+.row small{color:#aaa}
+.foot{color:#999;border-top:1px solid #3a3a3a;padding-top:9px;font-size:.75rem}
+
+/* seções */
+section.s{padding:68px 0;border-top:1.5px solid var(--line)}
+section.s h2{font-weight:800;font-size:clamp(1.7rem,3vw,2.3rem);letter-spacing:-.02em;line-height:1.1;margin:0 0 16px;max-width:22ch}
+section.s .intro{color:var(--ink-soft);max-width:58ch;margin:0 0 36px;font-size:1.125rem}
+
+.how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 48px}
+.how h3{font-size:1.15rem;margin:18px 0 6px;letter-spacing:-.01em}
+.how p{margin:0;color:var(--ink-soft);max-width:36ch}
+.how .vis{height:150px;display:flex;align-items:center}
+.states{display:flex;gap:16px;align-items:flex-end}
+.chip{display:grid;justify-items:center;gap:6px;font-size:.8rem;color:var(--ink-soft)}
+.chip svg{width:54px;height:54px}
+.quote{font-size:1.05rem;font-weight:700;line-height:1.35;border-left:4px solid var(--yellow);padding:4px 0 4px 16px;max-width:30ch}
+.bell{display:flex;gap:12px;align-items:center;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;max-width:300px}
+.bell .dot{width:12px;height:12px;border-radius:50%;background:var(--red);flex:none}
+.bell b{display:block;font-size:.95rem}
+.bell span{font-size:.88rem;color:var(--ink-soft)}
+
+table{width:100%;border-collapse:collapse;font-size:1.02rem}
+th,td{text-align:left;padding:18px 16px 18px 0;border-bottom:1.5px solid var(--line);vertical-align:top}
+th{font-weight:700;width:38%}
+td{color:var(--ink-soft)}
+caption{text-align:left}
+
+.install{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr);gap:56px;align-items:start}
+.cmd{background:var(--deep);border:1.5px solid var(--line);color:#e8eefc;border-radius:16px;padding:20px 22px;display:grid;gap:16px}
+.cmd code{font:400 1rem/1.6 var(--mono);white-space:normal;overflow-wrap:anywhere}
+.cmd button{justify-self:start;font:700 .95rem var(--sans);background:var(--ink);color:var(--night);border:0;padding:10px 18px;border-radius:10px;cursor:pointer}
+.cmd button:hover{background:#fff}
+.reqs{margin:22px 0 0;padding:0;list-style:none;color:var(--ink-soft)}
+.reqs li{padding:6px 0 6px 26px;position:relative}
+.reqs li::before{content:"";position:absolute;left:4px;top:15px;width:9px;height:9px;border-radius:50%;background:var(--blue)}
+.faq details{border-bottom:1.5px solid var(--line);padding:14px 0}
+.faq summary{font-weight:700;cursor:pointer}
+.faq p{color:var(--ink-soft);margin:10px 0 0}
+
+.star{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap}
+.star p{color:var(--ink-soft);max-width:46ch;margin:0}
+footer{padding:34px 0 50px;color:var(--ink-soft);font-size:.92rem;border-top:1.5px solid var(--line)}
+
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr;gap:44px;padding-top:16px}
+  .scene{justify-self:start}
+  .how{grid-template-columns:1fr}
+  .install{grid-template-columns:1fr;gap:36px}
+}
+@media (max-width:520px){
+  .meter{display:none}.mast .big{width:96px;height:96px}
+  .wrap{padding:0 20px}
+  .bar{height:64px;padding:0 14px}.bar .clock,.bar .sys{display:none}.ring svg{width:44px;height:44px}.popup{margin-left:0;width:100%}
+  th{width:auto}th,td{display:block;padding:6px 0}td{padding-bottom:18px}
+}
+@media (prefers-reduced-motion:reduce){.ring .arc,.track-bar i{animation:none}.breeze path{animation:none;opacity:.08;stroke-dasharray:none}}
+</style>
+</head>
+<body id="top">
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#top" aria-label="Breath, voltar ao topo"><svg width="0" height="0" style="position:absolute"><defs>
+<linearGradient id="lg-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#16243a"/><stop offset="1" stop-color="#0b1220"/></linearGradient>
+<linearGradient id="lg-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6fb3ff"/><stop offset="1" stop-color="#2f7de0"/></linearGradient>
+</defs></svg><svg class="mark" viewBox="0 0 256 256" aria-hidden="true">
+<rect x="8" y="8" width="240" height="240" rx="56" fill="url(#lg-bg)" stroke="#2a3c63" stroke-width="2"/>
+<circle cx="104" cy="128" r="62" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="16"/>
+<circle class="live-arc" cx="104" cy="128" r="62" pathLength="360" fill="none" stroke-width="16" stroke-linecap="round" transform="rotate(30 104 128)"/>
+<path d="M120 112 H192 C214 112 222 96 212 84 C204 75 190 80 192 92" fill="none" stroke="#cfe3fb" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M136 144 H200 C222 144 230 162 220 174 C212 183 198 178 200 166" fill="none" stroke="#f5c542" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><span>Breath</span><span class="meter" aria-hidden="true"><b id="pct">0%</b> da página</span></a>
+    <a class="gh" href="https://github.com/gaabrenno/breath">GitHub</a>
+  </header>
+
+  <main>
+  <div class="hero">
+    <svg class="breeze" viewBox="0 0 1600 700" preserveAspectRatio="none" aria-hidden="true">
+      <path style="--dash:420;--t:11s;--d:0s;--o:.22" d="M0 150 C 260 110, 470 190, 760 150 S 1240 100, 1460 160 c 60 16 70 70 25 78 c -32 6 -44 -24 -24 -38"/>
+      <path style="--dash:300;--t:14s;--d:-4s;--o:.14" d="M0 330 C 300 290, 560 380, 880 330 S 1300 300, 1600 340"/>
+      <path style="--dash:520;--t:12s;--d:-7s;--o:.18" d="M0 480 C 240 520, 520 430, 820 470 S 1180 540, 1400 480 c 70 -18 110 30 70 58 c -30 20 -60 -10 -40 -28"/>
+      <path style="--dash:260;--t:16s;--d:-10s;--o:.1" d="M0 610 C 380 580, 700 650, 1050 600 S 1450 590, 1600 620"/>
+      <path style="--dash:360;--t:13s;--d:-2s;--o:.12" d="M0 60 C 320 40, 640 90, 980 60 S 1400 30, 1600 70"/>
+    </svg>
+    <div>
+      <div class="mast"><svg class="big" viewBox="0 0 256 256" aria-hidden="true">
+<rect x="8" y="8" width="240" height="240" rx="56" fill="url(#lg-bg)" stroke="#2a3c63" stroke-width="2"/>
+<circle cx="104" cy="128" r="62" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="16"/>
+<path d="M157.7 159.0 A62 62 0 1 1 157.7 97.0" fill="none" stroke="url(#lg-blue)" stroke-width="16" stroke-linecap="round"/>
+<path d="M120 112 H192 C214 112 222 96 212 84 C204 75 190 80 192 92" fill="none" stroke="#cfe3fb" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M136 144 H200 C222 144 230 162 220 174 C212 183 198 178 200 166" fill="none" stroke="#f5c542" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><div class="word">Breath<small>Limites do Claude na barra do Linux</small></div></div>
+      <h1>Nesse ritmo, seu limite semanal acaba sexta de madrugada.</h1>
+      <p class="lede"><strong>O Breath te avisa antes.</strong> Ele mostra na barra do Linux quanto você já usou do Claude na sessão de 5 horas e na semana.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#instalar">Instalar</a>
+        <a class="btn btn-ghost" href="https://github.com/gaabrenno/breath">Ver no GitHub</a>
+      </div>
+    </div>
+
+    <div class="scene" aria-label="A barra do Linux com os dois anéis do Breath e o painel de detalhes aberto">
+      <div class="bar">
+        <span class="pill"></span>
+        <div class="rings">
+          <div class="ring" style="--p:42;--len:107">
+            <svg viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="17" fill="none" stroke-width="3.6"/><circle class="arc" cx="20" cy="20" r="17" fill="none" stroke="#3b8eea" stroke-width="3.6"/><text x="20" y="25" text-anchor="middle">42</text></svg>
+            <small>5h</small>
+          </div>
+          <div class="ring" style="--p:78;--len:107">
+            <svg viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="17" fill="none" stroke-width="3.6"/><circle class="arc" cx="20" cy="20" r="17" fill="none" stroke="#f5c542" stroke-width="3.6"/><text x="20" y="25" text-anchor="middle">78</text></svg>
+            <small>sem</small>
+          </div>
+        </div>
+        <span class="clock">qua 14:32</span>
+        <span class="sys" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+      <div class="popup" aria-hidden="true">
+        <b class="t">Limites do Claude, plano Pro</b>
+        <div class="warn"><b>Atenção.</b> Nesse ritmo, você vai esgotar seu limite semanal sexta de madrugada, antes da redefinição de segunda.</div>
+        <div class="row"><div class="h"><span>Sessão (janela de 5h)</span><strong>42%</strong></div><div class="track-bar"><i style="--p:42%;background:#3b8eea"></i></div><small>Reseta às 17:00, em 2h 28min</small></div>
+        <div class="row"><div class="h"><span>Semanal (todos os modelos)</span><strong>78%</strong></div><div class="track-bar"><i style="--p:78%;background:#f5c542"></i></div><small>Reseta seg 30 nov, 01:00</small></div>
+        <div class="foot">Atualizado há 1 minuto</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="s" id="como-funciona">
+    <h2>Seu fôlego, sempre à vista</h2>
+    <p class="intro">Dois anéis na barra: a sessão de 5 horas e a semana. Passe o mouse para ver os detalhes.</p>
+    <div class="how">
+      <div>
+        <div class="vis states" aria-hidden="true">
+          <div class="chip"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#23345a" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="#3b8eea" stroke-width="4" stroke-linecap="round" stroke-dasharray="40 101" transform="rotate(-90 20 20)"/></svg>Tranquilo</div>
+          <div class="chip"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#23345a" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="#f5c542" stroke-width="4" stroke-linecap="round" stroke-dasharray="80 101" transform="rotate(-90 20 20)"/></svg>Atenção</div>
+          <div class="chip"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#23345a" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="#e5484d" stroke-width="4" stroke-linecap="round" stroke-dasharray="94 101" transform="rotate(-90 20 20)"/></svg>Acabando</div>
+        </div>
+        <h3>Veja de relance</h3>
+        <p>A cor muda com o uso: azul é tranquilo, amarelo pede atenção, vermelho avisa que está acabando.</p>
+      </div>
+      <div>
+        <div class="vis"><p class="quote">“Nesse ritmo, você esgota a sessão por volta das 16:40.”</p></div>
+        <h3>Saiba antes de acabar</h3>
+        <p>O Breath calcula o seu ritmo e diz se o limite vai acabar antes do reset, e quando.</p>
+      </div>
+      <div>
+        <div class="vis"><div class="bell"><span class="dot"></span><div><b>Claude: 90% do limite</b><span>Semanal em 91%</span></div></div></div>
+        <h3>Um aviso aos 90%</h3>
+        <p>Uma notificação do sistema quando um limite passa de 90%, uma vez por janela.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="s" id="onde">
+    <h2>Funciona no seu Linux</h2>
+    <p class="intro">O instalador descobre o seu ambiente e coloca o Breath no lugar certo.</p>
+    <table>
+      <tr><th scope="row">GNOME 45 a 50</th><td>Os dois anéis na barra superior, com os detalhes ao passar o mouse.</td></tr>
+      <tr><th scope="row">KDE Plasma, XFCE, Cinnamon, MATE, Budgie</th><td>Dois ícones na bandeja. O clique abre o painel de detalhes junto do mouse.</td></tr>
+      <tr><th scope="row">Hyprland, Sway, i3</th><td>O comando <code>breath</code>, pronto para a waybar, a polybar e o i3blocks.</td></tr>
+    </table>
+  </section>
+
+  <section class="s" id="instalar">
+    <div class="install">
+      <div>
+        <h2>Instale com um comando</h2>
+        <p class="intro" style="margin-bottom:28px">Sem login e sem configuração. O Breath usa a sessão que o Claude Code já tem no seu computador e se atualiza sozinho.</p>
+        <div class="cmd">
+          <code id="cmd">curl -fsSL https://raw.githubusercontent.com/<wbr>gaabrenno/breath/main/install.sh | bash</code>
+          <button type="button" id="copy">Copiar</button>
+        </div>
+        <ul class="reqs">
+          <li>Claude Code instalado e logado com assinatura Pro ou Max</li>
+          <li>Funciona com o uso do site, do app e do Claude Code: é tudo o mesmo limite</li>
+        </ul>
+      </div>
+      <div class="faq">
+        <details><summary>Preciso fazer login no Breath?</summary><p>Não. Ele só lê o acesso que o Claude Code já guarda no computador, nunca pede senha e nunca altera esse arquivo.</p></details>
+        <details><summary>Meus dados saem do computador?</summary><p>Só a consulta de uso, que vai direto para a Anthropic. Nada mais é enviado.</p></details>
+        <details><summary>Como desinstalo?</summary><p>Um comando remove tudo. Ele está no README do projeto.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="s star">
+    <svg class="breeze" viewBox="0 0 1600 300" preserveAspectRatio="none" aria-hidden="true">
+      <path style="--dash:380;--t:12s;--d:-3s;--o:.16" d="M0 90 C 300 60, 620 130, 940 90 S 1320 60, 1480 100 c 55 14 62 60 22 66 c -28 4 -38 -20 -20 -32"/>
+      <path style="--dash:280;--t:15s;--d:-8s;--o:.1" d="M0 220 C 360 190, 720 250, 1080 210 S 1450 200, 1600 230"/>
+    </svg>
+    <div>
+      <h2>Seu fôlego chegou a 100%</h2>
+      <p>Antes do reset, que tal uma estrela no GitHub? O Breath é open source, e a estrela ajuda outras pessoas a encontrar o projeto.</p>
+    </div>
+    <a class="btn btn-primary" href="https://github.com/gaabrenno/breath">Dar uma estrela no GitHub</a>
+  </section>
+  </main>
+
+  <footer>Breath é um projeto independente, sem ligação com a Anthropic. Feito com Claude Code.</footer>
+</div>
+<script>
+// O logo do cabeçalho "consome" conforme a página rola: azul, amarelo a partir de 75%, vermelho a partir de 90%.
+(() => {
+  const root = document.documentElement, top = document.querySelector('.top'), pct = document.getElementById('pct');
+  const MIN = 18, MAX = 300; // graus do arco do logo (o original tem 300°)
+  let ticking = false;
+  function update() {
+    ticking = false;
+    const max = root.scrollHeight - innerHeight;
+    const p = max > 0 ? Math.min(100, Math.max(0, scrollY / max * 100)) : 100;
+    const level = p >= 90 ? '#e5484d' : p >= 75 ? '#f5c542' : '#3b8eea';
+    top.style.setProperty('--deg', (MIN + (MAX - MIN) * p / 100).toFixed(1));
+    top.style.setProperty('--level', level);
+    pct.textContent = Math.round(p) + '%';
+    top.classList.toggle('scrolled', scrollY > 8);
+  }
+  addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, {passive: true});
+  addEventListener('resize', update);
+  update();
+})();
+document.getElementById('copy').addEventListener('click', async e => {
+  const b = e.currentTarget;
+  try { await navigator.clipboard.writeText(document.getElementById('cmd').textContent); b.textContent = 'Copiado'; }
+  catch { b.textContent = 'Selecione e copie'; }
+  setTimeout(() => { b.textContent = 'Copiar'; }, 2000);
+});
+</script>
+</body>
+</html>

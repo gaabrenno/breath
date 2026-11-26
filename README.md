@@ -19,6 +19,8 @@ curl -fsSL https://raw.githubusercontent.com/gaabrenno/breath/main/install.sh | 
 
 <p align="center"><sub>Linux (GNOME, KDE, XFCE, Cinnamon…) · Claude Code com assinatura Pro ou Max · sem login, sem configuração</sub></p>
 
+<p align="center"><a href="https://gaabrenno.github.io/breath/"><strong>gaabrenno.github.io/breath</strong></a></p>
+
 ---
 
 ## Por que usar
