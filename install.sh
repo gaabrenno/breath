@@ -46,7 +46,7 @@ main() {
     command -v git >/dev/null 2>&1 ||
         die "o git não está instalado. Instale com: sudo apt install git"
 
-    local gs in_gnome=0 gnome49=0
+    local gs in_gnome=0 gnome49=0 no_tray=0
     gs=$(gnome-shell --version 2>/dev/null || true)
     [[ ${XDG_CURRENT_DESKTOP:-} == *GNOME* ]] && in_gnome=1
     [[ $gs =~ ^GNOME\ Shell\ 49(\.|$) ]] && gnome49=1
@@ -54,7 +54,15 @@ main() {
         if [ $in_gnome = 1 ] && [ $gnome49 = 1 ]; then
             mode=gnome
         elif [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
-            mode=tray
+            # Só há onde pôr os ícones se existir uma bandeja StatusNotifierItem
+            # (a do i3bar, por exemplo, é a antiga do X11).
+            if gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
+                --method org.freedesktop.DBus.NameHasOwner org.kde.StatusNotifierWatcher 2>/dev/null | grep -q true; then
+                mode=tray
+            else
+                mode=cli
+                no_tray=1
+            fi
         else
             mode=cli
         fi
@@ -192,6 +200,11 @@ EOF
             [ $in_gnome = 1 ] && say "No GNOME, os ícones precisam da extensão \"AppIndicator and KStatusNotifierItem Support\" ligada (o Ubuntu já traz)."
             say "Os ícones já devem aparecer na bandeja." ;;
         cli)
+            if [ $no_tray = 1 ]; then
+                say "Não encontrei uma bandeja compatível no seu painel, então instalei só o comando breath."
+                [ $in_gnome = 1 ] && say "No GNOME, ligue a extensão \"AppIndicator and KStatusNotifierItem Support\"."
+                say "Se o seu painel tiver uma bandeja compatível, rode o instalador de novo com --tray."
+            fi
             say "Use: breath   (ou breath --short / breath --waybar)"
             say "Na waybar: \"custom/breath\": {\"exec\": \"breath --waybar\", \"return-type\": \"json\", \"interval\": 30}" ;;
     esac

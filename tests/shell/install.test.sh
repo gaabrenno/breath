@@ -207,3 +207,16 @@ test_no_systemd_cli() {
     assert_contains "$(CONF)" "updater=none"
     assert_contains "$HOME/out.txt" "atualizações automáticas"
 }
+test_no_watcher_falls_back_to_cli() {
+    sandbox; make_remote v1.0.0
+    XDG_CURRENT_DESKTOP=i3 DISPLAY=:0 FAKE_WATCHER=false run_install || { cat "$HOME/out.txt"; fail "saída != 0"; }
+    assert_contains "$(CONF)" "mode=cli"
+    assert_contains "$HOME/out.txt" "--tray"
+    assert_not_contains "$HOME/out.txt" "Os ícones já devem aparecer"
+    assert_not_contains "$SYSLOG" "setsid"
+}
+test_flag_tray_without_watcher() {
+    sandbox; make_remote v1.0.0
+    FAKE_WATCHER=false bash "$REPO_ROOT/install.sh" --tray > "$HOME/out.txt" 2>&1 || fail "saída != 0"
+    assert_contains "$(CONF)" "mode=tray"
+}

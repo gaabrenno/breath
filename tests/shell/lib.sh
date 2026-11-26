@@ -23,6 +23,11 @@ echo "systemctl $*" >> "$SYSLOG"
 [ "${2:-}" = show-environment ] && exit "${FAKE_NO_SYSTEMD:-0}"
 exit 0
 S
+    cat > "$STUBS/gdbus" <<'S'
+#!/usr/bin/env bash
+echo "gdbus $*" >> "$SYSLOG"
+echo "(${FAKE_WATCHER:-true},)"
+S
     cat > "$STUBS/gjs" <<'S'
 #!/usr/bin/env bash
 echo "gjs $*" >> "$SYSLOG"
