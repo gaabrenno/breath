@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import System from 'system';
 
 import {StatusNotifierItem} from './sni.js';
-import {DBusMenu, menuItems, gnomeMenuItems} from './dbusmenu.js';
+import {DBusMenu, menuItems, GnomeClickMenus} from './dbusmenu.js';
 import {ringPixmaps} from './icon.js';
 import {tooltipFor} from './text.js';
 import {ViewCache, ensureFresh} from './viewcache.js';
@@ -14,7 +14,7 @@ import {notify} from './notifier.js';
 import {loadKwinPlacement} from './kwin.js';
 
 const APP_NAME = 'io.github.gaabrenno.Breath';
-const MENU_PATH = '/MenuBar';
+const MENU_PATHS = ['/MenuBar', '/MenuBar2'];
 const USAGE_PAGE = 'https://claude.ai/settings/usage';
 const RESTART_DELAY_SEC = 5;
 
@@ -76,22 +76,36 @@ class Tray {
         this._repoDir = repoDir;
         this._cache = new ViewCache(paths().cacheDir);
         this._rt = createRuntime({onNotify: notify});
+        // No GNOME (AppIndicator), o clique simples sempre abre o menu: a abertura dele
+        // vira a abertura do painel (ver GnomeClickMenus).
+        this._host = watcherHost(conn);
+        const gnome = this._host === 'gnome-shell';
         // Cada ícone tem a sua conexão: os dois usam o caminho /StatusNotifierItem
-        // e o menu precisa estar no mesmo serviço que o ícone.
-        this._menus = [];
+        // e o menu precisa estar no mesmo serviço que o ícone. Dois menus por ícone,
+        // para a troca do GNOME; nos outros painéis só o primeiro é usado.
         const item = (id, title, label) => {
             const c = privateConnection();
-            this._menus.push(new DBusMenu(c, MENU_PATH, a => this._onAction(a), ev => this._onMenuRoot(ev)));
-            return new StatusNotifierItem({conn: c, id, title, label, menuPath: MENU_PATH,
+            const menus = [];
+            let sni = null;
+            const flip = new GnomeClickMenus({
+                paths: MENU_PATHS,
+                setItems: (i, items) => menus[i].setItems(items),
+                setMenuPath: p => sni.setMenuPath(p),
+                openPopup: () => this._togglePopup(),
+            });
+            MENU_PATHS.forEach((path, i) => menus.push(new DBusMenu(c, path, a => this._onAction(a),
+                ev => gnome && flip.onRoot(i, ev))));
+            if (gnome)
+                menus.forEach(m => m.setItems(flip.initialItems()));
+            else
+                menus[0].setItems(menuItems());
+            sni = new StatusNotifierItem({conn: c, id, title, label, menuPath: MENU_PATHS[0],
                 onActivate: (_x, _y, token) => this._togglePopup(token)});
+            return sni;
         };
         this._items = {};
         for (const it of ITEMS)
             this._items[it.kind] = item(it.id, it.title, it.label);
-        // No GNOME (AppIndicator), o clique simples sempre abre o menu: a abertura dele
-        // vira a abertura do painel (ver _onMenuRoot).
-        this._host = watcherHost(conn);
-        this._setMenus(this._host === 'gnome-shell' ? gnomeMenuItems() : menuItems());
         this._view = null;
         this._popup = undefined; // carregado no primeiro clique (GTK4 é opcional)
         this._timer = 0;
@@ -142,26 +156,6 @@ class Tray {
             this._tick();
             return GLib.SOURCE_REMOVE;
         });
-    }
-
-    _setMenus(items) {
-        for (const m of this._menus)
-            m.setItems(items);
-    }
-
-    /**
-     * GNOME: o menu abriu → abre o painel e esvazia o menu (o GNOME o esconde, mas
-     * segura o próximo clique). Quando o GNOME avisar que fechou, o item volta.
-     */
-    _onMenuRoot(ev) {
-        if (this._host !== 'gnome-shell')
-            return;
-        if (ev === 'opened') {
-            this._togglePopup();
-            this._setMenus([]);
-        } else {
-            this._setMenus(gnomeMenuItems());
-        }
     }
 
     async _togglePopup(activationToken = null) {

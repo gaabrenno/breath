@@ -142,6 +142,12 @@ export class StatusNotifierItem {
         this._impl.emit_signal('NewToolTip', null);
     }
 
+    /** Troca o menu do ícone (a AppIndicator do GNOME recria o menu na hora). */
+    setMenuPath(path) {
+        this._menuPath = path;
+        this._impl.emit_property_changed('Menu', new GLib.Variant('o', path));
+    }
+
     destroy() {
         this._cancelRetry();
         if (this._labelTimer)

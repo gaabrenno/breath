@@ -57,9 +57,52 @@ export function menuItems() {
  * Menu da bandeja no GNOME (AppIndicator): lá o clique simples sempre abre o menu,
  * então ele tem um único item e a abertura dele abre o painel de detalhes.
  * (Um item invisível não serve: o GNOME não abre menu sem item visível.)
+ * Cada volta do item usa um id novo: a AppIndicator não readiciona um id removido.
  */
-export function gnomeMenuItems() {
-    return [{id: 1, label: 'Abrindo os detalhes…', enabled: false, type: 'standard'}];
+export function gnomeMenuItems(id) {
+    return [{id, label: 'Abrindo os detalhes…', enabled: false, type: 'standard'}];
+}
+
+/**
+ * GNOME (AppIndicator): o clique simples sempre abre o menu. Quando o menu atual
+ * abre, abre o painel e esvazia o menu (ele some). Com o menu fechado, a AppIndicator
+ * adia qualquer atualização do menu até ele abrir de novo, e um menu vazio não abre;
+ * por isso, ao fechar, o ícone passa a apontar para o outro menu (a AppIndicator
+ * recria o menu na hora quando a propriedade Menu muda).
+ */
+export class GnomeClickMenus {
+    /**
+     * @param {{paths:string[], setItems:(index:number, items:object[])=>void,
+     *          setMenuPath:(path:string)=>void, openPopup:()=>void}} o
+     */
+    constructor({paths, setItems, setMenuPath, openPopup}) {
+        Object.assign(this, {_paths: paths, _setItems: setItems, _setMenuPath: setMenuPath,
+            _openPopup: openPopup});
+        this._current = 0;
+        this._nextId = 1;
+    }
+
+    get currentPath() {
+        return this._paths[this._current];
+    }
+
+    /** Itens iniciais de cada menu. */
+    initialItems() {
+        return gnomeMenuItems(this._nextId++);
+    }
+
+    onRoot(index, ev) {
+        if (index !== this._current)
+            return; // evento atrasado do menu que já saiu de uso
+        if (ev === 'opened') {
+            this._openPopup();
+            this._setItems(index, []);
+        } else {
+            this._setItems(index, gnomeMenuItems(this._nextId++));
+            this._current = 1 - index;
+            this._setMenuPath(this.currentPath);
+        }
+    }
 }
 
 /** 'opened' / 'closed' quando o evento é do menu raiz (id 0); senão null. */

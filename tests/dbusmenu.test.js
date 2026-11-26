@@ -1,5 +1,5 @@
 import {assertEq} from './assert.js';
-import {menuItems, layoutVariant, rootEvent, gnomeMenuItems} from '../linux/dbusmenu.js';
+import {menuItems, layoutVariant, rootEvent, gnomeMenuItems, GnomeClickMenus} from '../linux/dbusmenu.js';
 
 export default {
     'menu enxuto: detalhes, separador e as duas ações': () => {
@@ -19,8 +19,29 @@ export default {
         assertEq(rootEvent(0, 'clicked'), null);
     },
     'menu do GNOME: um item visível e inativo': () =>
-        assertEq(gnomeMenuItems().map(i => [i.id, i.label, i.enabled, i.visible !== false]),
+        assertEq(gnomeMenuItems(1).map(i => [i.id, i.label, i.enabled, i.visible !== false]),
             [[1, 'Abrindo os detalhes…', false, true]]),
+    'menu do GNOME: id novo a cada volta (a AppIndicator não readiciona um id removido)': () =>
+        assertEq(gnomeMenuItems(7)[0].id, 7),
+    'GNOME: abrir o menu abre o painel e esvazia; fechar troca para o outro menu': () => {
+        const log = [];
+        const g = new GnomeClickMenus({
+            paths: ['/MenuBar', '/MenuBar2'],
+            setItems: (i, items) => log.push(`items ${i} ${items.length}`),
+            setMenuPath: p => log.push(`menu ${p}`),
+            openPopup: () => log.push('painel'),
+        });
+        assertEq(g.currentPath, '/MenuBar');
+        g.onRoot(0, 'opened');
+        g.onRoot(0, 'closed');
+        assertEq(log, ['painel', 'items 0 0', 'items 0 1', 'menu /MenuBar2']);
+        assertEq(g.currentPath, '/MenuBar2');
+        log.length = 0;
+        g.onRoot(0, 'opened'); // evento atrasado do menu antigo: ignora
+        g.onRoot(1, 'opened');
+        g.onRoot(1, 'closed');
+        assertEq(log, ['painel', 'items 1 0', 'items 1 1', 'menu /MenuBar']);
+    },
     'layout com revisão e filhos': () => {
         const items = menuItems();
         const [rev, [rootId, props, children]] = layoutVariant(items, 7).deepUnpack();
