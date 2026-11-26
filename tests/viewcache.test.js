@@ -43,6 +43,15 @@ export default {
         assertEq(c.isFresh({savedAt: now}, now + 150e3), false);
         assertEq(c.isFresh(null, now), false);
     },
+    'cache gravado no futuro não é fresco': () => {
+        const c = new ViewCache(tmp());
+        assertEq(c.isFresh({savedAt: now + 3600e3}, now), false);
+    },
+    'trava com horário no futuro é abandonada': () => {
+        const dir = tmp();
+        put(dir, 'refresh.lock', String(now + 3600e3));
+        assertEq(new ViewCache(dir).tryLock(now), true);
+    },
     'trava exclusiva': () => {
         const c = new ViewCache(tmp());
         assertEq(c.tryLock(now), true);

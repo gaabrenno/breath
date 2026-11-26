@@ -44,7 +44,11 @@ export class ViewCache {
     }
 
     isFresh(entry, nowMs) {
-        return entry !== null && entry !== undefined && nowMs - entry.savedAt < FRESH_MS;
+        if (entry === null || entry === undefined)
+            return false;
+        // Idade negativa (relógio voltou): não confia, consulta de novo.
+        const age = nowMs - entry.savedAt;
+        return age >= 0 && age < FRESH_MS;
     }
 
     tryLock(nowMs) {
@@ -63,7 +67,8 @@ export class ViewCache {
                     const [, bytes] = this._lock.load_contents(null);
                     held = Number(new TextDecoder().decode(bytes).trim());
                 } catch {}
-                if (Number.isFinite(held) && nowMs - held < LOCK_STALE_MS)
+                const age = nowMs - held;
+                if (Number.isFinite(held) && age >= 0 && age < LOCK_STALE_MS)
                     return false;
                 this.unlock();
             }
